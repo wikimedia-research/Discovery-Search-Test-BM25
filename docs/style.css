@@ -1,0 +1,14 @@
+body { font-size: 10pt; }
+.caption { font-size: 8pt; }
+h1 { font-size: 18pt; }
+h2 { font-size: 16pt; }
+h3 { font-size: 14pt; }
+h4 { font-size: 12pt; }
+h5 { font-size: 12pt; }
+h6 { font-size: 12pt; }
+
+.author { font-size: 12pt; }
+
+a, a:hover, a:visited, a:active { color: #3399ff; text-decoration: none; }
+
+.sql { font-size: 6pt; }
