@@ -3,7 +3,7 @@ test_query_clustering <- function(search_id, linkage, threshold) {
   cluster_queries(
     searches$query[searches$search_id == search_id],
     searches$`result page IDs`[searches$search_id == search_id],
-    threshold, linkage,
+    linkage, threshold,
     debug = TRUE)$hc %>%
     ggdendro::ggdendrogram(rotate = FALSE) +
     geom_hline(yintercept = threshold, linetype = "dashed") +
@@ -25,6 +25,7 @@ test_query_clustering("8a83a2a6257da633isnslryc", linkage, thresholds[linkage])
 test_query_clustering("8af09cd4f35e2a6aistiwmt7", linkage, thresholds[linkage])
 test_query_clustering("3d19ce39564f4db7issy961e", linkage, thresholds[linkage])
 test_query_clustering("6a550000c1d085f5isoqdao4", linkage, thresholds[linkage])
+test_query_clustering("2ece69a6b4a52bc6isqc455q", linkage, thresholds[linkage])
 
 for (id in sample_n(filter(tally(group_by(searches, search_id)), n == 10), 20)$search_id ) {
   test_query_clustering(id, testing_threshold)

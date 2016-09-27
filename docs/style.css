@@ -12,3 +12,13 @@ h6 { font-size: 12pt; }
 a, a:hover, a:visited, a:active { color: #3399ff; text-decoration: none; }
 
 .sql { font-size: 6pt; }
+
+dl {
+  margin-left: 0.1in;
+}
+dl dt {
+  font-style: italic;
+}
+dl dd {
+  margin: 0.01in 0 0.05in 0.25in;
+}
