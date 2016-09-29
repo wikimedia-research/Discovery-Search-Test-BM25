@@ -16,7 +16,7 @@
 <meta name="author" content="Deb Tankersley (Product Management)" />
 <meta name="author" content="Chelsy Xie (Review)" />
 
-<meta name="date" content="2016-09-27" />
+<meta name="date" content="2016-09-29" />
 
 <title>A/B Test of BM25 Search Ranking</title>
 
@@ -273,14 +273,14 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">A/B Test of BM25 Search Ranking</h1>
-<h3 class="subtitle"><em>Pre-first Draft</em></h3>
+<h3 class="subtitle"><em>Almost First Draft</em></h3>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:EBernhardson_(WMF)'>Erik Bernhardson</a> (Engineering)</em></h4>
 <h4 class="author"><em><a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:TJones_(WMF)'>Trey Jones</a> (Engineering &amp; Review)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:MPopov_(WMF)'>Mikhail Popov</a> (Analysis &amp; Report)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:DTankersley_(WMF)'>Deb Tankersley</a> (Product Management)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:CXie_(WMF)'>Chelsy Xie</a> (Review)</em></h4>
-<h4 class="date"><em>27 September 2016</em></h4>
+<h4 class="date"><em>29 September 2016</em></h4>
 
 </div>
 
@@ -318,11 +318,32 @@ $(function() {
 <span class="co"># extrafont::font_import(&quot;~/Downloads/Lato2OFL&quot;)</span></code></pre></div>
 <div id="executive-summary" class="section level2">
 <h2>Executive Summary</h2>
-<p>…</p>
+<p>In order to improve the relevancy of search results, Discovery’s Search team has decided to test a new document ranking method called BM25, which would replace the term frequency–inverse document frequency (tf–idf) method that is currently used. We saw the following results from our analysis:</p>
+<dl>
+<dt>Same query builder as control group but using BM25 as similarity function</dt>
+<dd>For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independant factor (QIF). Users in this group were less likely to click on the 1st search result and instead more likely to click on the second search result. They were also more likely to reformulate their query. With regards to zero results rate (ZRR), PaulScore, and engagement, users in this group were very similar to users in the control group.
+</dd>
+<dt>Using per-field query building with incoming links as QIF</dt>
+<dd>For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independant factor. This group had the second-highest PaulScores and engagement, both in searches where the user reformulated their query and in searches without query reformulation. Users in this group were more likely to click on the first search result than users in the control group.
+</dd>
+<dt>Using per-field query builder with incoming links and pageviews as QIFs</dt>
+<dd>Similar to the group described above but we added pageviews as an additional query independent factor for searches made by users in this group. This group had the highest PaulScores and engagement, both in searches where the user reformulated their query and in searches without query reformulation. Users in this group were a lot more likely to click on the first search result than users in the control group.
+</dd>
+<dt>Track typos in first 2 characters</dt>
+<dd>Similar to the group described above (<em>using per-field query builder with incoming links and pageviews as QIFs</em>), but with an additional field to track typos in the first two characters. This group had the lowest ZRR, and its ZRR was statistically significantly smaller than the control group’s ZRR. This group also had the smallest proportion of searches where the user reformulated their query. Users in this group were a lot more likely to click on the first search result than users in the control group.
+</dd>
+</dl>
+<p>We recommend switching to BM25 ranking with incoming links (and possibly pageviews) as query-independent factors, as this configuration appears to give users results that are more relevant and that they engage with more (especially the first search result).</p>
 </div>
 <div id="background" class="section level2">
 <h2>Background</h2>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam interdum luctus velit ac euismod. Donec molestie ipsum at lorem pharetra porttitor. Sed nec finibus nisi, convallis laoreet leo. Curabitur tempus neque porttitor, pulvinar nisi ac, pulvinar augue. Quisque ac venenatis purus. In mollis ligula eget velit laoreet rhoncus. Sed eget nisi tempor quam rhoncus tempus. Nullam eleifend justo tellus, eget tempor lectus sodales id. Quisque quis lorem pharetra, rhoncus libero eget, rhoncus nisl. Duis massa dolor, luctus nec purus sed, euismod condimentum neque. Maecenas laoreet mauris at dui consequat gravida. Curabitur ut consequat lacus. In libero sem, dignissim ac ultricies eget, ornare eu ex. Phasellus sed lacus malesuada, luctus sapien et, gravida risus. Phasellus sed tempor metus. Morbi a dignissim tellus.</p>
+<p>The Discovery department’s mission is to help users discover and access knowledge on Wikipedia and other Wikimedia projects. One of the goals of Discovery’s Search team is to improve the relevance of results when users search Wikipedia and its sister projects. Currently, our search engine uses <a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf">term frequency–inverse document frequency (tf–idf)</a> to rank articles. To improve the search results, we decided to try a new document-ranking function: <a href="https://en.wikipedia.org/wiki/Okapi_BM25">Okapi BM25</a>. To assess the efficacy of the proposed switch, we ran an A/B test for 10 days and anonymously tracked randomly sampled search sessions. Some users received search results acquired through the tf–idf method, while others received search results acquired through BM25 with various configurations. We are primarily interested in:</p>
+<ul>
+<li><strong>Zero results rate</strong>, the proportion of searches that yielded zero results (smaller is better)</li>
+<li><strong>Users’ engagement</strong> with the search results, measured as the clickthrough rate (bigger is better)</li>
+<li><strong>PaulScore</strong>, a metric of search results’ relevancy that relies on the position of the clicked result[s] (bigger is better)</li>
+<li><strong>Query reformulation</strong> – the less times the user reformulated their query, the better our search engine performs (within reason, as we can only do so much with misspelled words)</li>
+</ul>
 </div>
 <div id="methods" class="section level2">
 <h2>Methods</h2>
@@ -347,7 +368,7 @@ $(function() {
 </dd>
 </dl>
 <p>For all the groups listed above, we include the normalized <a href="https://en.wikipedia.org/wiki/Discounted_cumulative_gain">discounted cumulative gain</a> (<a href="https://en.wikipedia.org/wiki/Discounted_cumulative_gain#Normalized_DCG">nDCG</a>) score – a measure of ranking quality – computed from ranking data collected through <a href="https://www.mediawiki.org/wiki/Wikimedia_Discovery/Search/Glossary#Discernatron">Discernatron</a>, a tool that allows participants to judge the relevance of search results to help the Search team be able to test changes before making them available on-wiki.</p>
-<p>The event logging data was extracted from the database using the following SQL query:</p>
+<p>The full-text (as opposed to auto-complete) searching event logging data was extracted from the database using the following SQL query:</p>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span>
   <span class="kw">LEFT</span>(`timestamp`, <span class="dv">8</span>) <span class="kw">AS</span> <span class="dt">date</span>,
   event_subTest <span class="kw">AS</span> test_group,
@@ -710,7 +731,7 @@ reformulation_counts &lt;-<span class="st"> </span><span class="kw">cbind</span>
                      <span class="dt">breaks =</span> <span class="kw">seq</span>(.<span class="dv">16</span>, .<span class="dv">24</span>, <span class="fl">0.01</span>),
                      <span class="dt">minor_breaks =</span> <span class="kw">seq</span>(.<span class="dv">16</span>, .<span class="dv">24</span>, <span class="fl">0.005</span>),
                      <span class="dt">expand =</span> <span class="kw">c</span>(<span class="fl">0.01</span>, <span class="fl">0.01</span>)) +
-<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">1</span>)) +
+<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">2</span>)) +
 <span class="st">  </span><span class="kw">facet_wrap</span>(~<span class="st"> </span>linkage, <span class="dt">ncol =</span> <span class="dv">3</span>) +
 <span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> <span class="kw">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> *<span class="st"> </span>proportion), <span class="dt">y =</span> upper +<span class="st"> </span><span class="fl">0.005</span>, <span class="dt">vjust =</span> <span class="st">&quot;bottom&quot;</span>),
             <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
@@ -778,7 +799,7 @@ paulscores &lt;-<span class="st"> </span>searches %&gt;%
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">paulscores %&gt;%
 <span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> <span class="st">`</span><span class="dt">F value</span><span class="st">`</span>, <span class="dt">y =</span> PaulScore, <span class="dt">color =</span> <span class="st">`</span><span class="dt">test group</span><span class="st">`</span>)) +
 <span class="st">  </span><span class="kw">geom_pointrange</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> Lower, <span class="dt">ymax =</span> Upper), <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="fl">0.7</span>)) +
-<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">1</span>)) +
+<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">2</span>)) +
 <span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">limits =</span> <span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.35</span>)) +
 <span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="ot">NULL</span>, <span class="dt">y =</span> <span class="st">&quot;PaulScore(F)&quot;</span>,
        <span class="dt">title =</span> <span class="st">&quot;PaulScore(F) by test group and value of F&quot;</span>,
@@ -829,7 +850,7 @@ engagement &lt;-<span class="st"> </span><span class="kw">cbind</span>(
              <span class="dt">data =</span> <span class="kw">filter</span>(engagement, <span class="st">`</span><span class="dt">test group</span><span class="st">`</span> ==<span class="st"> &quot;Control Group (tf–idf)&quot;</span>)) +
 <span class="st">  </span><span class="kw">geom_pointrange</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> lower, <span class="dt">ymax =</span> upper), <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
 <span class="st">  </span><span class="kw">facet_grid</span>(reformulated ~<span class="st"> </span>linkage, <span class="dt">scales =</span> <span class="st">&quot;free_y&quot;</span>) +
-<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">1</span>)) +
+<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">2</span>)) +
 <span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> scales::<span class="kw">percent_format</span>(), <span class="dt">expand =</span> <span class="kw">c</span>(<span class="fl">0.01</span>, <span class="fl">0.01</span>)) +
 <span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="ot">NULL</span>, <span class="dt">y =</span> <span class="st">&quot;Clickthrough rate&quot;</span>,
        <span class="dt">title =</span> <span class="st">&quot;Engagement with search results by test group and presence of query reformulation&quot;</span>,
@@ -849,6 +870,52 @@ engagement &lt;-<span class="st"> </span><span class="kw">cbind</span>(
 <p class="caption"><strong>Figure 5</strong>: Clickthrough rates of test groups after splitting searches into those having query reformulations and those without query reformulations.</p>
 </div>
 </div>
+<div id="first-clicked-results-position" class="section level3">
+<h3>First Clicked Result’s Position</h3>
+<p>In Figure 6, we see…</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">safe_ordinals &lt;-<span class="st"> </span>function(x) {
+  <span class="kw">return</span>(<span class="kw">vapply</span>(x, toOrdinal::toOrdinal, <span class="st">&quot;&quot;</span>))
+}
+first_clicked &lt;-<span class="st"> </span>searches %&gt;%
+<span class="st">  </span><span class="kw">filter</span>(results ==<span class="st"> &quot;some&quot;</span> &amp;<span class="st"> </span>clickthrough &amp;<span class="st"> </span>!<span class="kw">is.na</span>(<span class="st">`</span><span class="dt">first clicked result&#39;s position</span><span class="st">`</span>)) %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="st">`</span><span class="dt">first clicked result&#39;s position</span><span class="st">`</span> =<span class="st"> </span><span class="kw">ifelse</span>(<span class="st">`</span><span class="dt">first clicked result&#39;s position</span><span class="st">`</span> &lt;<span class="st"> </span><span class="dv">4</span>, <span class="kw">safe_ordinals</span>(<span class="st">`</span><span class="dt">first clicked result&#39;s position</span><span class="st">`</span> +<span class="st"> </span><span class="dv">1</span>), <span class="st">&quot;5th or higher&quot;</span>)) %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(<span class="st">`</span><span class="dt">test group</span><span class="st">`</span>, <span class="st">`</span><span class="dt">first clicked result&#39;s position</span><span class="st">`</span>) %&gt;%
+<span class="st">  </span>tally %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">total =</span> <span class="kw">sum</span>(n), <span class="dt">prop =</span> n/total) %&gt;%
+<span class="st">  </span>ungroup
+<span class="kw">set.seed</span>(<span class="dv">0</span>)
+temp &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(binom:::<span class="kw">binom.bayes</span>(first_clicked$n, <span class="dt">n =</span> first_clicked$total, <span class="dt">tol =</span> .Machine$double.eps^<span class="fl">0.1</span>)[, <span class="kw">c</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)])
+first_clicked &lt;-<span class="st"> </span><span class="kw">cbind</span>(first_clicked, temp); <span class="kw">rm</span>(temp)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">first_clicked %&gt;%
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> <span class="dv">1</span>, <span class="dt">y =</span> mean, <span class="dt">color =</span> <span class="st">`</span><span class="dt">test group</span><span class="st">`</span>)) +
+<span class="st">  </span><span class="kw">geom_hline</span>(
+    <span class="kw">aes</span>(<span class="dt">yintercept =</span> mean), 
+    <span class="dt">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="dt">color =</span> RColorBrewer::<span class="kw">brewer.pal</span>(<span class="dv">3</span>, <span class="st">&quot;Set1&quot;</span>)[<span class="dv">1</span>],
+    <span class="dt">data =</span> <span class="kw">filter</span>(first_clicked, <span class="st">`</span><span class="dt">test group</span><span class="st">`</span> ==<span class="st"> &quot;Control Group (tf–idf)&quot;</span>)
+  ) +
+<span class="st">  </span><span class="kw">geom_pointrange</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> lower, <span class="dt">ymax =</span> upper), <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> <span class="kw">sprintf</span>(<span class="st">&quot;%.1f&quot;</span>, <span class="dv">100</span> *<span class="st"> </span>prop), <span class="dt">y =</span> upper +<span class="st"> </span><span class="fl">0.0025</span>, <span class="dt">vjust =</span> <span class="st">&quot;bottom&quot;</span>),
+            <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> scales::<span class="kw">percent_format</span>(),
+                     <span class="dt">expand =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.005</span>), <span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="fl">0.01</span>)) +
+<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">2</span>)) +
+<span class="st">  </span><span class="kw">facet_wrap</span>(~<span class="st"> `</span><span class="dt">first clicked result&#39;s position</span><span class="st">`</span>, <span class="dt">scale =</span> <span class="st">&quot;free_y&quot;</span>, <span class="dt">nrow =</span> <span class="dv">1</span>) +
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="ot">NULL</span>, <span class="dt">y =</span> <span class="st">&quot;Proportion of searches&quot;</span>,
+       <span class="dt">title =</span> <span class="st">&quot;Position of the first clicked result&quot;</span>,
+       <span class="dt">subtitle =</span> <span class="st">&quot;With 95% credible intervals&quot;</span>) +
+<span class="st">  </span><span class="kw">theme_minimal</span>(<span class="dt">base_family =</span> <span class="st">&quot;Lato&quot;</span>) +
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>,
+        <span class="dt">panel.grid.major.x =</span> <span class="kw">element_blank</span>(),
+        <span class="dt">panel.grid.minor.x =</span> <span class="kw">element_blank</span>(),
+        <span class="dt">axis.ticks.x =</span> <span class="kw">element_blank</span>(),
+        <span class="dt">axis.text.x =</span> <span class="kw">element_blank</span>(),
+        <span class="dt">strip.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill =</span> <span class="st">&quot;gray90&quot;</span>),
+        <span class="dt">panel.border =</span> <span class="kw">element_rect</span>(<span class="dt">color =</span> <span class="st">&quot;gray30&quot;</span>, <span class="dt">fill =</span> <span class="ot">NA</span>))</code></pre></div>
+<div class="figure">
+<img src="index_files/figure-html/first_clicked_position_eda-1.png" alt="Figure 6: First clicked result’s position by group." />
+<p class="caption"><strong>Figure 6</strong>: First clicked result’s position by group.</p>
+</div>
+</div>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
@@ -856,7 +923,7 @@ engagement &lt;-<span class="st"> </span><span class="kw">cbind</span>(
 <h3>Reading</h3>
 <ol>
 <li id="ref-1">
-<a href = "https://www.mediawiki.org/wiki/Wikimedia_Discovery/Search/Glossary">Discovery’s Glossary</a> on Wikimedia Discovery/Search/Glossary
+<a href = "https://www.mediawiki.org/wiki/Wikimedia_Discovery/Search/Glossary">Wikimedia Discovery/Search/Glossary</a>
 </li>
 </ol>
 </div>
