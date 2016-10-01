@@ -16,9 +16,9 @@
 <meta name="author" content="Deb Tankersley (Product Management)" />
 <meta name="author" content="Chelsy Xie (Review)" />
 
-<meta name="date" content="2016-09-29" />
+<meta name="date" content="2016-09-30" />
 
-<title>A/B Test of BM25 Search Ranking</title>
+<title>Improving search result relevancy on Wikipedia with BM25 ranking</title>
 
 <script src="index_files/jquery-1.11.3/jquery.min.js"></script>
 <script src="index_files/jqueryui-1.11.4/jquery-ui.min.js"></script>
@@ -272,15 +272,15 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">A/B Test of BM25 Search Ranking</h1>
-<h3 class="subtitle"><em>Almost First Draft</em></h3>
+<h1 class="title toc-ignore">Improving search result relevancy on Wikipedia with BM25 ranking</h1>
+<h3 class="subtitle"><em>First Draft</em></h3>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:EBernhardson_(WMF)'>Erik Bernhardson</a> (Engineering)</em></h4>
 <h4 class="author"><em><a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:TJones_(WMF)'>Trey Jones</a> (Engineering &amp; Review)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:MPopov_(WMF)'>Mikhail Popov</a> (Analysis &amp; Report)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:DTankersley_(WMF)'>Deb Tankersley</a> (Product Management)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:CXie_(WMF)'>Chelsy Xie</a> (Review)</em></h4>
-<h4 class="date"><em>29 September 2016</em></h4>
+<h4 class="date"><em>30 September 2016</em></h4>
 
 </div>
 
@@ -300,37 +300,21 @@ $(function() {
 <p>
 { <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25/blob/master/docs/index.Rmd">RMarkdown Source</a> | <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25">Analysis Codebase</a> }
 </p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load packages that we will be using in this report:</span>
-
-<span class="co"># install.packages(&quot;devtools&quot;)</span>
-<span class="co"># devtools::install_github(&quot;hadley/ggplot2&quot;)</span>
-<span class="co"># ^ development version of ggplot2 includes subtitles</span>
-<span class="co"># devtools::install_github(&quot;wikimedia/wikimedia-discovery-polloi&quot;)</span>
-<span class="co"># ^ for compressing 100000 into 100K</span>
-
-<span class="kw">library</span>(tidyverse) <span class="co"># install.packages(&quot;tidyverse&quot;)</span>
-<span class="co"># ^ for ggplot2, dplyr, tidyr, broom, etc.</span>
-
-<span class="kw">library</span>(binom) <span class="co"># install.packages(&quot;binom&quot;)</span>
-<span class="co"># ^ for Bayesian confidence intervals of proportions</span>
-
-<span class="co"># Font to go together with HTML version of report: http://www.latofonts.com/</span>
-<span class="co"># extrafont::font_import(&quot;~/Downloads/Lato2OFL&quot;)</span></code></pre></div>
 <div id="executive-summary" class="section level2">
 <h2>Executive Summary</h2>
 <p>In order to improve the relevancy of search results, Discovery’s Search team has decided to test a new document ranking method called BM25, which would replace the term frequency–inverse document frequency (tf–idf) method that is currently used. We saw the following results from our analysis:</p>
 <dl>
 <dt>Same query builder as control group but using BM25 as similarity function</dt>
-<dd>For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independant factor (QIF). Users in this group were less likely to click on the 1st search result and instead more likely to click on the second search result. They were also more likely to reformulate their query. With regards to zero results rate (ZRR), PaulScore, and engagement, users in this group were very similar to users in the control group.
+<dd>For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independent factor (QIF). Users in this group were less likely to click on the 1st search result and instead more likely to click on the second search result. They were also more likely to reformulate their query. With regards to zero results rate (ZRR), PaulScore, and engagement, users in this group were very similar to users in the control group.
 </dd>
 <dt>Using per-field query building with incoming links as QIF</dt>
-<dd>For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independant factor. This group had the second-highest PaulScores and engagement, both in searches where the user reformulated their query and in searches without query reformulation. Users in this group were more likely to click on the first search result than users in the control group.
+<dd>For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independent factor. This group had the second-highest PaulScores and engagement in searches where the user reformulated their query. Users in this group were more likely to click on the first search result than users in the control group.
 </dd>
 <dt>Using per-field query builder with incoming links and pageviews as QIFs</dt>
 <dd>Similar to the group described above but we added pageviews as an additional query independent factor for searches made by users in this group. This group had the highest PaulScores and engagement, both in searches where the user reformulated their query and in searches without query reformulation. Users in this group were a lot more likely to click on the first search result than users in the control group.
 </dd>
 <dt>Track typos in first 2 characters</dt>
-<dd>Similar to the group described above (<em>using per-field query builder with incoming links and pageviews as QIFs</em>), but with an additional field to track typos in the first two characters. This group had the lowest ZRR, and its ZRR was statistically significantly smaller than the control group’s ZRR. This group also had the smallest proportion of searches where the user reformulated their query. Users in this group were a lot more likely to click on the first search result than users in the control group.
+<dd>Similar to the group described above (<em>using per-field query builder with incoming links and pageviews as QIFs</em>), but with an additional field to track typos in the first two characters. This group had the lowest ZRR, and its ZRR was significantly smaller than the control group’s ZRR. This group also had the smallest proportion of searches where the user reformulated their query. Users in this group were a lot more likely to click on the first search result than users in the control group, but had lowest overall engagement with the search results.
 </dd>
 </dl>
 <p>We recommend switching to BM25 ranking with incoming links (and possibly pageviews) as query-independent factors, as this configuration appears to give users results that are more relevant and that they engage with more (especially the first search result).</p>
@@ -355,10 +339,10 @@ $(function() {
 <dd>Identical to what we serve to our users today plus an artificial latency to compensate the fact that we run the other buckets on another data center. (nDCG<sub>5</sub> score on Discernatron: 0.2772)
 </dd>
 <dt>Same query builder as control group but using BM25 as similarity function</dt>
-<dd>For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independant factor (QIF). We expected this bucket to behave poorly in term of clickthrough compared to the control group. We included this group confirm our assumptions that the current query builder and the “all field” approach is not designed for the BM25 similarity. (nDCG<sub>5</sub> score on Discernatron: 0.2689)
+<dd>For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independent factor (QIF). We expected this bucket to behave poorly in term of clickthrough compared to the control group. We included this group confirm our assumptions that the current query builder and the “all field” approach is not designed for the BM25 similarity. (nDCG<sub>5</sub> score on Discernatron: 0.2689)
 </dd>
 <dt>Using per-field query building with incoming links as QIF</dt>
-<dd>For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independant factor. This is the best contender according to Discernatron. We expect an increase in clickthrough because it tends rank obvious matches in the top 3. (nDCG<sub>5</sub> score on Discernatron: 0.3362)
+<dd>For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independent factor. This is the best contender according to Discernatron. We expect an increase in clickthrough because it tends rank obvious matches in the top 3. (nDCG<sub>5</sub> score on Discernatron: 0.3362)
 </dd>
 <dt>Using per-field query builder with incoming links and pageviews as QIFs</dt>
 <dd>Similar to the group described above but we added pageviews as an additional query independent factor for searches made by users in this group. The weight for pageviews is still very low compared to incoming links and this test is mostly to see how pageviews could affect the ranking. We expect a very minimal difference in behavior compared to group <em>using per-field query building with incoming links as QIF</em>. (nDCG<sub>5</sub> score on Discernatron: 0.3359)
@@ -398,8 +382,58 @@ $(function() {
 <strong>Snippet 1</strong>: Query used to extract BM25 test data from our event logging database.
 </p>
 </div>
+<div id="software" class="section level3">
+<h3>Software</h3>
+<p>We used the statistical analysis software and programming language R<sup><a href="#ref-2">[2]</a></sup> to perform this analysis. R packages used the most in this report include ggplot2<sup><a href="#ref-4">[4]</a></sup>, dplyr<sup><a href="#ref-5">[5]</a></sup>, and binom<sup><a href="#ref-8">[8]</a></sup>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Install packages used in the report:</span>
+<span class="kw">install.packages</span>(<span class="kw">c</span>(<span class="st">&quot;devtools&quot;</span>, <span class="st">&quot;tidyverse&quot;</span>, <span class="st">&quot;binom&quot;</span>))
+devtools::<span class="kw">install_github</span>(<span class="st">&quot;hadley/ggplot2&quot;</span>)
+<span class="co"># ^ development version of ggplot2 includes subtitles</span>
+devtools::<span class="kw">install_github</span>(<span class="st">&quot;wikimedia/wikimedia-discovery-polloi&quot;</span>)
+<span class="co"># ^ for converting 100000 into 100K via polloi::compress()</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load packages that we will be using in this report:</span>
+<span class="kw">library</span>(tidyverse) <span class="co"># for ggplot2, dplyr, tidyr, broom, etc.</span>
+<span class="kw">library</span>(binom) <span class="co"># for Bayesian confidence intervals of proportions</span></code></pre></div>
+</div>
 <div id="query-reformulation-detection" class="section level3">
 <h3>Query Reformulation Detection</h3>
+<p>When a user searches Wikipedia using query <span class="math inline">\(Q\)</span> and does not get the results that they were looking for then they might give up, or they might reformulate their query and search for <span class="math inline">\(Q&#39;, Q&#39;&#39;, Q&#39;&#39;&#39;\)</span>, etc., each time fixing a typo, editing a word, or adding new information. For example, if the user searches for the restaurant chain “Buffalo Wild Wings” using the search query “buffalo”, they won’t see the result on the first search results page. The user might go to the second page of results, in which case they would see the result they want, or they user might reformulate their query to instead say “buffalo wings”.</p>
+<p>First, we computed the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">Levenshtein (edit) distance</a> (normalized via dividing by maximum of two search queries). Then we adjusted those normalized distances by the amount that their search results overlapped. Specifically, if <span class="math inline">\(d_{Q, Q&#39;}\)</span> is the edit distance between queries <span class="math inline">\(Q\)</span> and <span class="math inline">\(Q&#39;\)</span> and <span class="math inline">\(\rho_{Q, Q&#39;} \in [0, 1]\)</span> is the number of results in common normalized via dividing by minimum size of the two result sets, then the new distance is: <span class="math display">\[{d&#39;}_{Q, Q&#39;} = \frac{d_{Q, Q&#39;}}{10^{\rho_{Q, Q&#39;}}}.\]</span> So if <span class="math inline">\(Q\)</span> and <span class="math inline">\(Q&#39;\)</span> are moderately similar but have all results in common, then the new distance is 1/10<sup>th</sup> of their initially calculated distance, and brings them a lot closer to each other. If they do not have any results in common, their edit distance in unaffected. After we have calculated the distances between queries in a search session, we use <a href="https://en.wikipedia.org/wiki/Cluster_analysis#Connectivity-based_clustering_.28hierarchical_clustering.29">hierarchical agglomerative clustering</a> to group those queries based on their adjusted closeness (similarity). In this report we present an analysis result when employing each of the three linkages (<a href="https://en.wikipedia.org/wiki/Complete-linkage_clustering">complete</a>, <a href="https://en.wikipedia.org/wiki/Single-linkage_clustering">single</a>, and <a href="https://en.wikipedia.org/wiki/UPGMA">average</a>), since the choice of linkage affects the clustering (see Table 1 for an example).</p>
+<p>For example:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Search query</th>
+<th align="center">Single-linkage</th>
+<th align="center">Complete-linkage</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">brtisth gas</td>
+<td align="center">A</td>
+<td align="center">A</td>
+</tr>
+<tr class="even">
+<td align="left">brtisth gaz</td>
+<td align="center">A</td>
+<td align="center">A</td>
+</tr>
+<tr class="odd">
+<td align="left">brtisth gazcomapny</td>
+<td align="center">B</td>
+<td align="center">A</td>
+</tr>
+<tr class="even">
+<td align="left">fusion shell bg group</td>
+<td align="center">C</td>
+<td align="center">B</td>
+</tr>
+</tbody>
+</table>
+<p class="caption">
+<strong>Table 1</strong>: Example of how choice of linkage affects clustering of queries from a real search session.
+</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">overlapping_results &lt;-<span class="st"> </span>function(x) {
   if (<span class="kw">all</span>(<span class="kw">is.na</span>(x))) {
     <span class="kw">return</span>(<span class="kw">diag</span>(<span class="kw">length</span>(x)))
@@ -427,7 +461,7 @@ cluster_queries &lt;-<span class="st"> </span>function(queries, results, <span c
   input &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">query =</span> queries, <span class="dt">stringsAsFactors =</span> <span class="ot">FALSE</span>)
   x &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(input$query, function(x) {
     <span class="co"># Compute for each x in input$query the normalized edit distance from x to input$query:</span>
-    normalized_distances &lt;-<span class="st"> </span><span class="kw">adist</span>(<span class="kw">tolower</span>(x), <span class="kw">tolower</span>(input$query), <span class="dt">fixed =</span> <span class="ot">TRUE</span>)/<span class="kw">max</span>(<span class="kw">nchar</span>(input$query))
+    normalized_distances &lt;-<span class="st"> </span><span class="kw">adist</span>(<span class="kw">tolower</span>(x), <span class="kw">tolower</span>(input$query), <span class="dt">fixed =</span> <span class="ot">TRUE</span>)/<span class="kw">pmax</span>(<span class="kw">nchar</span>(x), <span class="kw">nchar</span>(input$query))
     <span class="co"># Return:</span>
     <span class="kw">return</span>(normalized_distances)
   }))
@@ -472,11 +506,10 @@ cluster_queries &lt;-<span class="st"> </span>function(queries, results, <span c
   }
   <span class="kw">return</span>(output$cluster)
 }</code></pre></div>
-<p>Sed finibus magna eu turpis laoreet, eu convallis ex convallis. Suspendisse potenti. Maecenas bibendum nunc at leo iaculis laoreet. Cras eros libero, sollicitudin sed ligula quis, molestie rutrum est. Aenean pharetra volutpat luctus. Nulla facilisi. Ut rutrum, augue ac faucibus maximus, dui sem lacinia lectus, ut egestas dui ligula sed enim. Nunc tincidunt velit eu augue tincidunt maximus. Nam nec ante nec lacus iaculis fringilla eu non turpis. Duis id urna vehicula, mattis urna sed, condimentum neque. Nunc eget lectus elementum, imperdiet odio suscipit, tristique mauris.</p>
 </div>
 <div id="paulscore-definition" class="section level3">
 <h3>PaulScore Definition</h3>
-<p>PaulScore<a href="#ref-1">[1]</a> is computed via the following steps:</p>
+<p>PaulScore<a href="#ref-1">[1]</a> is a measure of search results’ relevancy which takes into account the position of the clicked results, and is computed via the following steps:</p>
 <ol>
 <li>Pick scoring factor <span class="math inline">\(0 &lt; F &lt; 1\)</span>.</li>
 <li>For <span class="math inline">\(i\)</span>-th search session <span class="math inline">\(S_i\)</span> <span class="math inline">\((i = 1, \ldots, n)\)</span> containing <span class="math inline">\(m\)</span> queries <span class="math inline">\(Q_1, \ldots, Q_m\)</span> and search result sets <span class="math inline">\(\mathbf{R}_1, \ldots, \mathbf{R}_m\)</span>:
@@ -518,7 +551,7 @@ events$test_group &lt;-<span class="st"> </span><span class="kw">factor</span>(
 cirrus &lt;-<span class="st"> </span>readr::<span class="kw">read_tsv</span>(<span class="kw">path</span>(<span class="st">&quot;data/ab-test_bm25_cirrus-results.tsv.gz&quot;</span>), <span class="dt">col_types =</span> <span class="st">&quot;ccc&quot;</span>)
 events &lt;-<span class="st"> </span><span class="kw">left_join</span>(events, cirrus, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;event_id&quot;</span>, <span class="st">&quot;page_id&quot;</span>))
 <span class="kw">rm</span>(cirrus)</code></pre></div>
-<p>The test was deployed on September 1st and ran for 10 days, collecting a total of 119.6K events from 36.2K unique sessions. See Table 1 for counts broken down by test group.</p>
+<p>The test was deployed on September 1st and ran for 10 days, collecting a total of 119.6K events from 36.2K unique sessions. See Table 2 for counts broken down by test group.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">events_summary &lt;-<span class="st"> </span>events %&gt;%
 <span class="st">  </span><span class="kw">group_by</span>(<span class="st">`</span><span class="dt">Test group</span><span class="st">`</span> =<span class="st"> </span>test_group) %&gt;%
 <span class="st">  </span><span class="kw">summarize</span>(<span class="st">`</span><span class="dt">Search sessions</span><span class="st">`</span> =<span class="st"> </span><span class="kw">length</span>(<span class="kw">unique</span>(search_id)), <span class="st">`</span><span class="dt">Events recorded</span><span class="st">`</span> =<span class="st"> </span><span class="kw">n</span>()) %&gt;%
@@ -579,11 +612,11 @@ knitr::<span class="kw">kable</span>(events_summary, <span class="dt">format =</
 </tbody>
 </table>
 <p class="caption">
-<strong>Table 1</strong>: Counts of sessions anonymously tracked and events collected during the one-week-long A/B test.
+<strong>Table 2</strong>: Counts of sessions anonymously tracked and events collected during the one-week-long A/B test.
 </p>
 <div id="serp-de-duplication" class="section level3">
 <h3>SERP De-duplication</h3>
-<p>Duis massa dolor, luctus nec purus sed, euismod condimentum neque. Maecenas laoreet mauris at dui consequat gravida. Curabitur ut consequat lacus. In libero sem, dignissim ac ultricies eget, ornare eu ex. Phasellus sed lacus malesuada, luctus sapien et, gravida risus. Phasellus sed tempor metus. Morbi a dignissim tellus.</p>
+<p>An issue we noticed with the event logging is that when the user goes to the next page of search results or clicks the Back button after visiting a search result, a new page ID is generated for the search results page. The page ID is how we connect click events to search result page events. There is currently a Phabricator ticket (<a href="https://phabricator.wikimedia.org/T146337">T146337</a>) for addressing these issues. For this analysis, we de-duplicated by connecting SERP events that have the exact same search query, and then connected click events together based on the SERP connection.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Correct for when user uses pagination or uses back button to go back to SERP after visiting a result.</span>
 <span class="co"># Start by assigning the same page_id to different SERPs that have exactly the same query:</span>
 temp &lt;-<span class="st"> </span>events %&gt;%
@@ -630,12 +663,13 @@ safe_clust &lt;-<span class="st"> </span>function(search_id, page_ids, queries, 
     <span class="kw">return</span>(clusters)
   }
 }</code></pre></div>
+<p>After de-duplicating, we collapsed 101.1K (SERP and click) events into 70K searches.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">searches &lt;-<span class="st"> </span>searches %&gt;%
 <span class="st">  </span><span class="kw">group_by</span>(<span class="st">`</span><span class="dt">test group</span><span class="st">`</span>, session_id, search_id) %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(
-    <span class="dt">cluster_single =</span> <span class="kw">safe_clust</span>(search_id, page_id, query, <span class="st">`</span><span class="dt">result page IDs</span><span class="st">`</span>, <span class="fl">0.3</span>, <span class="st">&quot;single&quot;</span>),
+    <span class="dt">cluster_single =</span> <span class="kw">safe_clust</span>(search_id, page_id, query, <span class="st">`</span><span class="dt">result page IDs</span><span class="st">`</span>, <span class="fl">0.301</span>, <span class="st">&quot;single&quot;</span>),
     <span class="dt">cluster_average =</span> <span class="kw">safe_clust</span>(search_id, page_id, query, <span class="st">`</span><span class="dt">result page IDs</span><span class="st">`</span>, <span class="fl">0.433</span>, <span class="st">&quot;average&quot;</span>),
-    <span class="dt">cluster_complete =</span> <span class="kw">safe_clust</span>(search_id, page_id, query, <span class="st">`</span><span class="dt">result page IDs</span><span class="st">`</span>, <span class="fl">0.377</span>, <span class="st">&quot;complete&quot;</span>)
+    <span class="dt">cluster_complete =</span> <span class="kw">safe_clust</span>(search_id, page_id, query, <span class="st">`</span><span class="dt">result page IDs</span><span class="st">`</span>, <span class="fl">0.45</span>, <span class="st">&quot;complete&quot;</span>)
   )</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">most_common &lt;-<span class="st"> </span>function(x) {
   if (<span class="kw">all</span>(<span class="kw">is.na</span>(x))) {
@@ -684,7 +718,7 @@ query_reformulations &lt;-<span class="st"> </span><span class="kw">bind_rows</s
 </div>
 <div id="query-reformulation" class="section level3">
 <h3>Query Reformulation</h3>
-<p>In Figures 1 and 2, we see…</p>
+<p>As mentioned in the Methods section, we used hierarchical clustering to group similar searches together. That is, if the edit distance between two search queries is small enough and the search result sets overlap, those searches are probably the user reformulating their query. In Figures 1 and 2, we see proportions of searches that were reformulations, according to three different ways to group searches. The second group (“same query builder as control group but using BM25”) had the highest proportion of searches where the user reformulated their query at least once. According to clustering via single linkage, the last group (BM25 with incoming links and tracking typos) had the lowest proportion of query reformulations.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Calculate proportions of searches with 0, 1, 2, 3+ query reformulations</span>
 query_reformulations %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(<span class="st">`</span><span class="dt">query reformulations</span><span class="st">`</span> =<span class="st"> </span>forcats::<span class="kw">fct_lump</span>(<span class="kw">factor</span>(reformulations), <span class="dv">3</span>, <span class="dt">other_level =</span> <span class="st">&quot;3+&quot;</span>)) %&gt;%
@@ -728,12 +762,12 @@ reformulation_counts &lt;-<span class="st"> </span><span class="kw">cbind</span>
              <span class="dt">data =</span> <span class="kw">filter</span>(reformulation_counts, <span class="st">`</span><span class="dt">test group</span><span class="st">`</span> ==<span class="st"> &quot;Control Group (tf–idf)&quot;</span>)) +
 <span class="st">  </span><span class="kw">geom_pointrange</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> lower, <span class="dt">ymax =</span> upper), <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
 <span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> scales::<span class="kw">percent_format</span>(),
-                     <span class="dt">breaks =</span> <span class="kw">seq</span>(.<span class="dv">16</span>, .<span class="dv">24</span>, <span class="fl">0.01</span>),
-                     <span class="dt">minor_breaks =</span> <span class="kw">seq</span>(.<span class="dv">16</span>, .<span class="dv">24</span>, <span class="fl">0.005</span>),
+                     <span class="dt">breaks =</span> <span class="kw">seq</span>(.<span class="dv">10</span>, .<span class="dv">24</span>, <span class="fl">0.01</span>),
+                     <span class="dt">minor_breaks =</span> <span class="kw">seq</span>(.<span class="dv">10</span>, .<span class="dv">24</span>, <span class="fl">0.005</span>),
                      <span class="dt">expand =</span> <span class="kw">c</span>(<span class="fl">0.01</span>, <span class="fl">0.01</span>)) +
 <span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">2</span>)) +
 <span class="st">  </span><span class="kw">facet_wrap</span>(~<span class="st"> </span>linkage, <span class="dt">ncol =</span> <span class="dv">3</span>) +
-<span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> <span class="kw">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> *<span class="st"> </span>proportion), <span class="dt">y =</span> upper +<span class="st"> </span><span class="fl">0.005</span>, <span class="dt">vjust =</span> <span class="st">&quot;bottom&quot;</span>),
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> <span class="kw">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> *<span class="st"> </span>proportion), <span class="dt">y =</span> upper +<span class="st"> </span><span class="fl">0.0025</span>, <span class="dt">vjust =</span> <span class="st">&quot;bottom&quot;</span>),
             <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
 <span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">&quot;% of searches with query reformulations&quot;</span>, <span class="dt">x =</span> <span class="ot">NULL</span>,
        <span class="dt">title =</span> <span class="st">&quot;Searches with reformulated queries by test group (and linkage)&quot;</span>,
@@ -753,7 +787,7 @@ reformulation_counts &lt;-<span class="st"> </span><span class="kw">cbind</span>
 </div>
 <div id="zero-results-rate" class="section level3">
 <h3>Zero Results Rate</h3>
-<p>In Figure 3, we see…</p>
+<p>In Figure 3, we see that zero results rate (ZRR) was not so different between the groups. The test group where we tracked typos in first two characters had a significantly lower ZRR, but perhaps at the cost of relevance and engagement with the results (see Figure 5).</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">zrr_pages &lt;-<span class="st"> </span>searches %&gt;%
 <span class="st">  </span><span class="kw">group_by</span>(<span class="st">`</span><span class="dt">test group</span><span class="st">`</span>, results) %&gt;%
 <span class="st">  </span>tally %&gt;%
@@ -783,7 +817,7 @@ zrr_pages &lt;-<span class="st"> </span><span class="kw">cbind</span>(zrr_pages,
 </div>
 <div id="paulscore" class="section level3">
 <h3>PaulScore</h3>
-<p>In Figure 4, we see…</p>
+<p>In Figure 4, we see that the test groups that used BM25 with incoming links and pageviews as query-independent factors had higher PaulScores, which indicates that the results were more relevant.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">0</span>) <span class="co"># for reproducibility</span>
 paulscores &lt;-<span class="st"> </span>searches %&gt;%
 <span class="st">  </span>ungroup %&gt;%
@@ -821,7 +855,37 @@ paulscores &lt;-<span class="st"> </span>searches %&gt;%
 </div>
 <div id="engagement" class="section level3">
 <h3>Engagement</h3>
-<p>In Figure 5, we see…</p>
+<p>In Figures 5 and 6, we see that the test groups that used BM25 with incoming links and pageviews as query-independent factors engaged with their search results more. The group whose search configuration included pageviews had a much higher clickthrough rate than the control group when they did not reformulate their search query.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">engagement_overall &lt;-<span class="st"> </span>searches %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(<span class="st">`</span><span class="dt">test group</span><span class="st">`</span>) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">clickthroughs =</span> <span class="kw">sum</span>(clickthrough &gt;<span class="st"> </span><span class="dv">0</span>),
+            <span class="dt">searches =</span> <span class="kw">n</span>(), <span class="dt">ctr =</span> clickthroughs/searches) %&gt;%
+<span class="st">  </span>ungroup
+engagement_overall &lt;-<span class="st"> </span><span class="kw">cbind</span>(
+  engagement_overall,
+  <span class="kw">as.data.frame</span>(
+    binom:::<span class="kw">binom.bayes</span>(
+      engagement_overall$clickthroughs,
+      <span class="dt">n =</span> engagement_overall$searches)[, <span class="kw">c</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)]
+    )
+  )</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">engagement_overall %&gt;%
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> <span class="dv">1</span>, <span class="dt">y =</span> mean, <span class="dt">color =</span> <span class="st">`</span><span class="dt">test group</span><span class="st">`</span>)) +
+<span class="st">  </span><span class="kw">geom_hline</span>(<span class="kw">aes</span>(<span class="dt">yintercept =</span> mean), <span class="dt">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="dt">color =</span> RColorBrewer::<span class="kw">brewer.pal</span>(<span class="dv">3</span>, <span class="st">&quot;Set1&quot;</span>)[<span class="dv">1</span>],
+             <span class="dt">data =</span> <span class="kw">filter</span>(engagement_overall, <span class="st">`</span><span class="dt">test group</span><span class="st">`</span> ==<span class="st"> &quot;Control Group (tf–idf)&quot;</span>)) +
+<span class="st">  </span><span class="kw">geom_pointrange</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> lower, <span class="dt">ymax =</span> upper), <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
+<span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">2</span>)) +
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> scales::<span class="kw">percent_format</span>(), <span class="dt">expand =</span> <span class="kw">c</span>(<span class="fl">0.01</span>, <span class="fl">0.01</span>)) +
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="ot">NULL</span>, <span class="dt">y =</span> <span class="st">&quot;Clickthrough rate&quot;</span>,
+       <span class="dt">title =</span> <span class="st">&quot;Engagement with search results by test group&quot;</span>) +
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> <span class="kw">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> *<span class="st"> </span>ctr), <span class="dt">y =</span> upper +<span class="st"> </span><span class="fl">0.0025</span>, <span class="dt">vjust =</span> <span class="st">&quot;bottom&quot;</span>),
+            <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="dv">1</span>)) +
+<span class="st">  </span><span class="kw">theme_minimal</span>(<span class="dt">base_family =</span> <span class="st">&quot;Lato&quot;</span>) +
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</code></pre></div>
+<div class="figure">
+<img src="index_files/figure-html/engagement_overall_eda-1.png" alt="Figure 5: Clickthrough rates of test groups." />
+<p class="caption"><strong>Figure 5</strong>: Clickthrough rates of test groups.</p>
+</div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Figure out engagement (clickthroughs) on a per-search (&quot;query cluster&quot;) basis:</span>
 per_search_engagement &lt;-<span class="st"> </span>query_reformulations %&gt;%
 <span class="st">  </span><span class="kw">filter</span>(results ==<span class="st"> &quot;some&quot;</span>) %&gt;%
@@ -866,13 +930,13 @@ engagement &lt;-<span class="st"> </span><span class="kw">cbind</span>(
         <span class="dt">strip.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill =</span> <span class="st">&quot;gray90&quot;</span>),
         <span class="dt">panel.border =</span> <span class="kw">element_rect</span>(<span class="dt">color =</span> <span class="st">&quot;gray30&quot;</span>, <span class="dt">fill =</span> <span class="ot">NA</span>))</code></pre></div>
 <div class="figure">
-<img src="index_files/figure-html/engagement_eda-1.png" alt="Figure 5: Clickthrough rates of test groups after splitting searches into those having query reformulations and those without query reformulations." />
-<p class="caption"><strong>Figure 5</strong>: Clickthrough rates of test groups after splitting searches into those having query reformulations and those without query reformulations.</p>
+<img src="index_files/figure-html/engagement_eda-1.png" alt="Figure 6: Clickthrough rates of test groups after splitting searches into those having query reformulations and those without query reformulations." />
+<p class="caption"><strong>Figure 6</strong>: Clickthrough rates of test groups after splitting searches into those having query reformulations and those without query reformulations.</p>
 </div>
 </div>
 <div id="first-clicked-results-position" class="section level3">
 <h3>First Clicked Result’s Position</h3>
-<p>In Figure 6, we see…</p>
+<p>In Figure 7, we see that users who got the “all-field” query builder with BM25 were much less likely to click on the first search result first than the other groups. Other test groups (whose search configurations used incoming links) first clicked on the first result at a much higher rate than users in the control group.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">safe_ordinals &lt;-<span class="st"> </span>function(x) {
   <span class="kw">return</span>(<span class="kw">vapply</span>(x, toOrdinal::toOrdinal, <span class="st">&quot;&quot;</span>))
 }
@@ -912,10 +976,14 @@ first_clicked &lt;-<span class="st"> </span><span class="kw">cbind</span>(first_
         <span class="dt">strip.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill =</span> <span class="st">&quot;gray90&quot;</span>),
         <span class="dt">panel.border =</span> <span class="kw">element_rect</span>(<span class="dt">color =</span> <span class="st">&quot;gray30&quot;</span>, <span class="dt">fill =</span> <span class="ot">NA</span>))</code></pre></div>
 <div class="figure">
-<img src="index_files/figure-html/first_clicked_position_eda-1.png" alt="Figure 6: First clicked result’s position by group." />
-<p class="caption"><strong>Figure 6</strong>: First clicked result’s position by group.</p>
+<img src="index_files/figure-html/first_clicked_position_eda-1.png" alt="Figure 7: First clicked result’s position by group." />
+<p class="caption"><strong>Figure 7</strong>: First clicked result’s position by group.</p>
 </div>
 </div>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>We recommend switching to BM25 ranking with incoming links (and possibly pageviews) as query-independent factors, as this configuration appears to give users results that are more relevant and that they engage with more (especially the first search result).</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
@@ -927,40 +995,40 @@ first_clicked &lt;-<span class="st"> </span><span class="kw">cbind</span>(first_
 </li>
 </ol>
 </div>
-<div id="software" class="section level3">
+<div id="software-1" class="section level3">
 <h3>Software</h3>
 <ol start="2" style="list-style-type: decimal">
-<li id="ref-5">
+<li id="ref-2">
 R Core Team (2016). <em>R: A Language and Environment for StatisticalComputing</em>. R Foundation for Statistical Computing, Vienna,Austria. <a href="https://www.R-project.org/" class="uri">https://www.R-project.org/</a>
 </li>
-<li id="ref-6">
+<li id="ref-3">
 Bache SM and Wickham H (2014). <em>magrittr: A Forward-Pipe Operatorfor R</em>. R package version 1.5, <a href="https://CRAN.R-project.org/package=magrittr" class="uri">https://CRAN.R-project.org/package=magrittr</a>
 </li>
-<li id="ref-7">
+<li id="ref-4">
 Wickham H (2009). <em>ggplot2: Elegant Graphics for Data Analysis</em>.Springer-Verlag New York. ISBN 978-0-387-98140-6, <a href="http://ggplot2.org" class="uri">http://ggplot2.org</a>
 </li>
-<li id="ref-8">
+<li id="ref-5">
 Wickham H and Francois R (2016). <em>dplyr: A Grammar of DataManipulation</em>. R package version 0.5.0, <a href="https://CRAN.R-project.org/package=dplyr" class="uri">https://CRAN.R-project.org/package=dplyr</a>
 </li>
-<li id="ref-9">
+<li id="ref-6">
 Wickham H (2016). <em>tidyr: Easily Tidy Data with <code>spread()</code> and<code>gather()</code> Functions</em>. R package version 0.6.0, <a href="https://CRAN.R-project.org/package=tidyr" class="uri">https://CRAN.R-project.org/package=tidyr</a>
 </li>
-<li id="ref-10">
+<li id="ref-7">
 Wickham H, Hester J and Francois R (2016). <em>readr: Read TabularData</em>. R package version 1.0.0, <a href="https://CRAN.R-project.org/package=readr" class="uri">https://CRAN.R-project.org/package=readr</a>
 </li>
-<li id="ref-11">
+<li id="ref-8">
 Dorai-Raj S (2014). <em>binom: Binomial Confidence Intervals ForSeveral Parameterizations</em>. R package version 1.1-1, <a href="https://CRAN.R-project.org/package=binom" class="uri">https://CRAN.R-project.org/package=binom</a>
 </li>
-<li id="ref-12">
+<li id="ref-9">
 Allaire J, Cheng J, Xie Y, McPherson J, Chang W, Allen J, WickhamH, Atkins A and Hyndman R (2016). <em>rmarkdown: Dynamic Documentsfor R</em>. R package version 1.0, <a href="https://CRAN.R-project.org/package=rmarkdown" class="uri">https://CRAN.R-project.org/package=rmarkdown</a>
 </li>
-<li id="ref-13">
+<li id="ref-10">
 Xie Y (2016). <em>knitr: A General-Purpose Package for Dynamic ReportGeneration in R</em>. R package version 1.14, <a href="http://yihui.name/knitr/" class="uri">http://yihui.name/knitr/</a>
 </li>
-<li id="ref-14">
+<li id="ref-11">
 Xie Y (2015). <em>Dynamic Documents with R and knitr</em>, 2nd edition.Chapman and Hall/CRC, Boca Raton, Florida. ISBN 978-1498716963, <a href="http://yihui.name/knitr/" class="uri">http://yihui.name/knitr/</a>
 </li>
-<li id="ref-15">
+<li id="ref-12">
 Xie Y (2014). “knitr: A Comprehensive Tool for ReproducibleResearch in R.” In Stodden V, Leisch F and Peng RD (eds.),<em>Implementing Reproducible Computational Research</em>. Chapman andHall/CRC. ISBN 978-1466561595, <a href="http://www.crcpress.com/product/isbn/9781466561595" class="uri">http://www.crcpress.com/product/isbn/9781466561595</a>
 </li>
 </ol>

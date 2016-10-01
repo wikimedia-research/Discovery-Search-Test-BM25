@@ -1,19 +1,21 @@
 ## Debugging
 test_query_clustering <- function(search_id, linkage, threshold) {
-  cluster_queries(
+  temp <- cluster_queries(
     searches$query[searches$search_id == search_id],
     searches$`result page IDs`[searches$search_id == search_id],
     linkage, threshold,
-    debug = TRUE)$hc %>%
+    debug = TRUE)
+  print(temp$hc %>%
     ggdendro::ggdendrogram(rotate = FALSE) +
     geom_hline(yintercept = threshold, linetype = "dashed") +
     scale_y_reverse(breaks = seq(1, 0, -0.1)) +
     coord_flip() +
-    theme(axis.text.x = element_text(angle = 0), axis.text.y = element_text(angle = 0))
+    theme(axis.text.x = element_text(angle = 0), axis.text.y = element_text(angle = 0)))
+  return(temp)
 }
 
-thresholds <- c(complete = 0.377, average = 0.433, single = 0.3)
-linkage <- "average"
+thresholds <- c(complete = 0.45, average = 0.433, single = 0.301)
+linkage <- "single"
 
 test_query_clustering("bebbe975a46c96b9isj8gvu9", linkage, thresholds[linkage])
 test_query_clustering("0056ff08261b1676ispqfpq4", linkage, thresholds[linkage])
@@ -26,6 +28,27 @@ test_query_clustering("8af09cd4f35e2a6aistiwmt7", linkage, thresholds[linkage])
 test_query_clustering("3d19ce39564f4db7issy961e", linkage, thresholds[linkage])
 test_query_clustering("6a550000c1d085f5isoqdao4", linkage, thresholds[linkage])
 test_query_clustering("2ece69a6b4a52bc6isqc455q", linkage, thresholds[linkage])
+
+foo <- function(linkage) {
+  return({
+    test_query_clustering("3d19ce39564f4db7issy961e", linkage, thresholds[linkage])$output %>%
+      filter(query %in% c("brtisth gazcomapny", "brtisth gaz", "brtisth gaz", "brtisth gas", "fusion shell bg group")) %>%
+      arrange(query) %>%
+      mutate(cluster = LETTERS[as.numeric(factor(cluster))])
+  })
+}
+bind_rows(
+  "Single" = foo("single"),
+  "Complete" = foo("complete"),
+  "Average" = foo("average"),
+  .id = "linkage"
+) %>% spread(linkage, cluster) %>%
+  select(c(query, Single, Complete, Average)) %>%
+  rename(`Search query` = query) %>%
+  knitr::kable(format = "markdown", align = c("l", "c", "c", "c"))
+
+
+searches$query[searches$search_id == "3d19ce39564f4db7issy961e"]
 
 for (id in sample_n(filter(tally(group_by(searches, search_id)), n == 10), 20)$search_id ) {
   test_query_clustering(id, testing_threshold)

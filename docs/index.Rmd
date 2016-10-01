@@ -1,6 +1,6 @@
 ---
-title: "A/B Test of BM25 Search Ranking"
-subtitle: "Almost First Draft"
+title: "Improving search result relevancy on Wikipedia with BM25 ranking"
+subtitle: "First Draft"
 author:
 - <a href = 'https://meta.wikimedia.org/wiki/User:EBernhardson_(WMF)'>Erik Bernhardson</a> (Engineering)
 - <a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering)
@@ -42,7 +42,7 @@ $(function() {
 <p>{ <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25/blob/master/docs/index.Rmd">RMarkdown Source</a> | <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25">Analysis Codebase</a> }</p>
 ```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
 options(digits = 3, scipen = 500)
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, cache = TRUE, autodep = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 path <- function(x) {
   if (grepl("docs", getwd(), fixed = TRUE)) {
     return(file.path("..", x))
@@ -50,27 +50,12 @@ path <- function(x) {
     return(x)
   }
 }
-```
-```{r packages}
-# Load packages that we will be using in this report:
-
-# install.packages("devtools")
-# devtools::install_github("hadley/ggplot2")
-# ^ development version of ggplot2 includes subtitles
-# devtools::install_github("wikimedia/wikimedia-discovery-polloi")
-# ^ for compressing 100000 into 100K
-
-library(tidyverse) # install.packages("tidyverse")
-# ^ for ggplot2, dplyr, tidyr, broom, etc.
-
-library(binom) # install.packages("binom")
-# ^ for Bayesian confidence intervals of proportions
-
 # Font to go together with HTML version of report: http://www.latofonts.com/
 # extrafont::font_import("~/Downloads/Lato2OFL")
 ```
 ```{r captions, echo = FALSE}
 # Manual figure & table captioning:
+library(magrittr)
 library(captioner) # install.packages("captioner")
 table_caps <- captioner(prefix = "Table")
 figure_caps <- captioner(prefix = "Figure")
@@ -89,11 +74,13 @@ print_caption <- function(formatted_caption) {
 }
 # Add captions:
 code_caps(name = "bm25_query", caption = "Query used to extract BM25 test data from our event logging database.", display = FALSE)
+table_caps(name = "clustering_example", caption = "Example of how choice of linkage affects clustering of queries from a real search session.", display = FALSE)
 table_caps(name = "group_counts", caption = "Counts of sessions anonymously tracked and events collected during the one-week-long A/B test.", display = FALSE)
 figure_caps("query_reform_counts", "Proportions of searches with 0, 1, 2, and 3+ query reformulations.", display = FALSE)
 figure_caps("query_reform_prop", "Proportions of searches where user reformulated their query.", display = FALSE)
 figure_caps("zrr", "Zero results rate is the proportion of searches in which the user received zero results.", display = FALSE)
 figure_caps("paulscore", "Average per-group PaulScore for various values of F (0.1, 0.5, and 0.9) with bootstrapped confidence intervals.", display = FALSE)
+figure_caps("engagement_overall", "Clickthrough rates of test groups.", display = FALSE)
 figure_caps("engagement", "Clickthrough rates of test groups after splitting searches into those having query reformulations and those without query reformulations.", display = FALSE)
 figure_caps("first_clicked", "First clicked result's position by group.", display = FALSE)
 ```
@@ -103,16 +90,16 @@ figure_caps("first_clicked", "First clicked result's position by group.", displa
 In order to improve the relevancy of search results, Discovery's Search team has decided to test a new document ranking method called BM25, which would replace the term frequency–inverse document frequency (tf–idf) method that is currently used. We saw the following results from our analysis:
 
 Same query builder as control group but using BM25 as similarity function
-:   For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independant factor (QIF). Users in this group were less likely to click on the 1st search result and instead more likely to click on the second search result. They were also more likely to reformulate their query. With regards to zero results rate (ZRR), PaulScore, and engagement, users in this group were very similar to users in the control group.
+:   For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independent factor (QIF). Users in this group were less likely to click on the 1st search result and instead more likely to click on the second search result. They were also more likely to reformulate their query. With regards to zero results rate (ZRR), PaulScore, and engagement, users in this group were very similar to users in the control group.
 
 Using per-field query building with incoming links as QIF
-:   For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independant factor. This group had the second-highest PaulScores and engagement, both in searches where the user reformulated their query and in searches without query reformulation. Users in this group were more likely to click on the first search result than users in the control group.
+:   For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independent factor. This group had the second-highest PaulScores and engagement in searches where the user reformulated their query. Users in this group were more likely to click on the first search result than users in the control group.
 
 Using per-field query builder with incoming links and pageviews as QIFs
 :   Similar to the group described above but we added pageviews as an additional query independent factor for searches made by users in this group. This group had the highest PaulScores and engagement, both in searches where the user reformulated their query and in searches without query reformulation. Users in this group were a lot more likely to click on the first search result than users in the control group.
 
 Track typos in first 2 characters
-:   Similar to the group described above (*using per-field query builder with incoming links and pageviews as QIFs*), but with an additional field to track typos in the first two characters. This group had the lowest ZRR, and its ZRR was statistically significantly smaller than the control group's ZRR. This group also had the smallest proportion of searches where the user reformulated their query. Users in this group were a lot more likely to click on the first search result than users in the control group.
+:   Similar to the group described above (*using per-field query builder with incoming links and pageviews as QIFs*), but with an additional field to track typos in the first two characters. This group had the lowest ZRR, and its ZRR was significantly smaller than the control group's ZRR. This group also had the smallest proportion of searches where the user reformulated their query. Users in this group were a lot more likely to click on the first search result than users in the control group, but had lowest overall engagement with the search results.
 
 We recommend switching to BM25 ranking with incoming links (and possibly pageviews) as query-independent factors, as this configuration appears to give users results that are more relevant and that they engage with more (especially the first search result).
 
@@ -135,10 +122,10 @@ Control Group (tf–idf)
 :   Identical to what we serve to our users today plus an artificial latency to compensate the fact that we run the other buckets on another data center. (nDCG<sub>5</sub> score on Discernatron: 0.2772)
 
 Same query builder as control group but using BM25 as similarity function
-:   For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independant factor (QIF). We expected this bucket to behave poorly in term of clickthrough compared to the control group. We included this group confirm our assumptions that the current query builder and the "all field" approach is not designed for the BM25 similarity. (nDCG<sub>5</sub> score on Discernatron: 0.2689)
+:   For searches made by users in this group, we use the same query builder as we use for the control group but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independent factor (QIF). We expected this bucket to behave poorly in term of clickthrough compared to the control group. We included this group confirm our assumptions that the current query builder and the "all field" approach is not designed for the BM25 similarity. (nDCG<sub>5</sub> score on Discernatron: 0.2689)
 
 Using per-field query building with incoming links as QIF
-:   For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independant factor. This is the best contender according to Discernatron. We expect an increase in clickthrough because it tends rank obvious matches in the top 3. (nDCG<sub>5</sub> score on Discernatron: 0.3362)
+:   For searches made by users in this group, we use BM25 similarity and switch to a per-field query builder using only incoming links as a query independent factor. This is the best contender according to Discernatron. We expect an increase in clickthrough because it tends rank obvious matches in the top 3. (nDCG<sub>5</sub> score on Discernatron: 0.3362)
 
 Using per-field query builder with incoming links and pageviews as QIFs
 :   Similar to the group described above but we added pageviews as an additional query independent factor for searches made by users in this group. The weight for pageviews is still very low compared to incoming links and this test is mostly to see how pageviews could affect the ranking. We expect a very minimal difference in behavior compared to group _using per-field query building with incoming links as QIF_. (nDCG<sub>5</sub> score on Discernatron: 0.3359)
@@ -182,9 +169,44 @@ ORDER BY date, wiki, session_id, search_id, page_id, action DESC, timestamp;
 print_caption(format_caption(code_caps, "bm25_query"))
 ```
 
+### Software
+
+We used the statistical analysis software and programming language R<sup>[[2]](#ref-2)</sup> to perform this analysis. R packages used the most in this report include ggplot2<sup>[[4]](#ref-4)</sup>, dplyr<sup>[[5]](#ref-5)</sup>, and binom<sup>[[8]](#ref-8)</sup>.
+
+```{r install_packages, eval = FALSE}
+# Install packages used in the report:
+install.packages(c("devtools", "tidyverse", "binom"))
+devtools::install_github("hadley/ggplot2")
+# ^ development version of ggplot2 includes subtitles
+devtools::install_github("wikimedia/wikimedia-discovery-polloi")
+# ^ for converting 100000 into 100K via polloi::compress()
+```
+```{r load_packages}
+# Load packages that we will be using in this report:
+library(tidyverse) # for ggplot2, dplyr, tidyr, broom, etc.
+library(binom) # for Bayesian confidence intervals of proportions
+```
+
 ### Query Reformulation Detection
 
-```{r query_clustering_functions}
+When a user searches Wikipedia using query $Q$ and does not get the results that they were looking for then they might give up, or they might reformulate their query and search for $Q', Q'', Q'''$, etc., each time fixing a typo, editing a word, or adding new information. For example, if the user searches for the restaurant chain "Buffalo Wild Wings" using the search query "buffalo", they won't see the result on the first search results page. The user might go to the second page of results, in which case they would see the result they want, or they user might reformulate their query to instead say "buffalo wings".
+
+First, we computed the [Levenshtein (edit) distance](https://en.wikipedia.org/wiki/Levenshtein_distance) (normalized via dividing by maximum of two search queries). Then we adjusted those normalized distances by the amount that their search results overlapped. Specifically, if $d_{Q, Q'}$ is the edit distance between queries $Q$ and $Q'$ and $\rho_{Q, Q'} \in [0, 1]$ is the number of results in common normalized via dividing by minimum size of the two result sets, then the new distance is: $${d'}_{Q, Q'} = \frac{d_{Q, Q'}}{10^{\rho_{Q, Q'}}}.$$ So if $Q$ and $Q'$ are moderately similar but have all results in common, then the new distance is 1/10<sup>th</sup> of their initially calculated distance, and brings them a lot closer to each other. If they do not have any results in common, their edit distance in unaffected. After we have calculated the distances between queries in a search session, we use [hierarchical agglomerative clustering](https://en.wikipedia.org/wiki/Cluster_analysis#Connectivity-based_clustering_.28hierarchical_clustering.29) to group those queries based on their adjusted closeness (similarity). In this report we present an analysis result when employing each of the three linkages ([complete](https://en.wikipedia.org/wiki/Complete-linkage_clustering), [single](https://en.wikipedia.org/wiki/Single-linkage_clustering), and [average](https://en.wikipedia.org/wiki/UPGMA)), since the choice of linkage affects the clustering (see `r table_caps("clustering_example", display = "cite")` for an example).
+
+For example:
+
+|Search query          | Single-linkage | Complete-linkage |
+|:---------------------|:--------------:|:----------------:|
+|brtisth gas           |       A        |        A         |
+|brtisth gaz           |       A        |        A         |
+|brtisth gazcomapny    |       B        |        A         |
+|fusion shell bg group |       C        |        B         |
+
+```{r clustering_example_caption, results = "asis", echo = FALSE}
+print_caption(format_caption(table_caps, "clustering_example"))
+```
+
+```{r query_clustering_functions, cache = TRUE}
 overlapping_results <- function(x) {
   if (all(is.na(x))) {
     return(diag(length(x)))
@@ -212,7 +234,7 @@ cluster_queries <- function(queries, results, linkage = c("complete", "single", 
   input <- data.frame(query = queries, stringsAsFactors = FALSE)
   x <- do.call(rbind, lapply(input$query, function(x) {
     # Compute for each x in input$query the normalized edit distance from x to input$query:
-    normalized_distances <- adist(tolower(x), tolower(input$query), fixed = TRUE)/max(nchar(input$query))
+    normalized_distances <- adist(tolower(x), tolower(input$query), fixed = TRUE)/pmax(nchar(x), nchar(input$query))
     # Return:
     return(normalized_distances)
   }))
@@ -259,11 +281,9 @@ cluster_queries <- function(queries, results, linkage = c("complete", "single", 
 }
 ```
 
-Sed finibus magna eu turpis laoreet, eu convallis ex convallis. Suspendisse potenti. Maecenas bibendum nunc at leo iaculis laoreet. Cras eros libero, sollicitudin sed ligula quis, molestie rutrum est. Aenean pharetra volutpat luctus. Nulla facilisi. Ut rutrum, augue ac faucibus maximus, dui sem lacinia lectus, ut egestas dui ligula sed enim. Nunc tincidunt velit eu augue tincidunt maximus. Nam nec ante nec lacus iaculis fringilla eu non turpis. Duis id urna vehicula, mattis urna sed, condimentum neque. Nunc eget lectus elementum, imperdiet odio suscipit, tristique mauris.
-
 ### PaulScore Definition
 
-PaulScore[[1]](#ref-1) is computed via the following steps:
+PaulScore[[1]](#ref-1) is a measure of search results' relevancy which takes into account the position of the clicked results, and is computed via the following steps:
 
 #. Pick scoring factor $0 < F < 1$.
 #. For $i$-th search session $S_i$ $(i = 1, \ldots, n)$ containing $m$ queries $Q_1, \ldots, Q_m$ and search result sets $\mathbf{R}_1, \ldots, \mathbf{R}_m$:
@@ -273,7 +293,7 @@ PaulScore[[1]](#ref-1) is computed via the following steps:
 
 We can calculate the confidence interval of PaulScore$(F)$ by approximating its distribution via [boostrapping](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)).
 
-```{r paulscore_functions}
+```{r paulscore_functions, cache = TRUE}
 # PaulScore Calculation
 query_score <- function(positions, F) {
    if (length(positions) == 1 || all(is.na(positions))) {
@@ -295,7 +315,7 @@ bootstrap_mean <- function(x, m, seed = NULL) {
 ```
 
 ## Results
-```{r data}
+```{r data, cache = TRUE}
 # Import events fetched from MySQL
 load(path("data/ab-test_bm25.RData"))
 events$test_group <- factor(
@@ -323,16 +343,15 @@ events_summary <- events %>%
          `Events recorded` = prettyNum(`Events recorded`, big.mark = ","))
 knitr::kable(events_summary, format = "markdown", align = c("l", "r", "r"))
 ```
-
 ```{r summary_caption, results = "asis", echo = FALSE}
 print_caption(format_caption(table_caps, "group_counts"))
 ```
 
 ### SERP De-duplication
 
-Duis massa dolor, luctus nec purus sed, euismod condimentum neque. Maecenas laoreet mauris at dui consequat gravida. Curabitur ut consequat lacus. In libero sem, dignissim ac ultricies eget, ornare eu ex. Phasellus sed lacus malesuada, luctus sapien et, gravida risus. Phasellus sed tempor metus. Morbi a dignissim tellus.
+An issue we noticed with the event logging is that when the user goes to the next page of search results or clicks the Back button after visiting a search result, a new page ID is generated for the search results page. The page ID is how we connect click events to search result page events. There is currently a Phabricator ticket ([T146337](https://phabricator.wikimedia.org/T146337)) for addressing these issues. For this analysis, we de-duplicated by connecting SERP events that have the exact same search query, and then connected click events together based on the SERP connection.
 
-```{r serp_deduplication, dependson = "data"}
+```{r serp_deduplication, dependson = "data", cache = TRUE}
 # Correct for when user uses pagination or uses back button to go back to SERP after visiting a result.
 # Start by assigning the same page_id to different SERPs that have exactly the same query:
 temp <- events %>%
@@ -358,7 +377,7 @@ events <- events[!events$dupe & !is.na(events$new_page_id), ] %>%
   rename(page_id = new_page_id) %>%
   arrange(date, session_id, search_id, page_id, desc(action), ts)
 ```
-```{r aggregation, dependson = "serp_deduplication"}
+```{r aggregation, dependson = c("serp_deduplication", "paulscore_functions"), cache = TRUE}
 # Summarize on a page-by-page basis:
 searches <- events %>%
   group_by(`test group` = test_group, session_id, search_id, page_id) %>%
@@ -382,16 +401,17 @@ safe_clust <- function(search_id, page_ids, queries, results, threshold, linkage
   }
 }
 ```
-```{r query_clustering, dependson = "aggregation"}
+After de-duplicating, we collapsed `r polloi::compress(nrow(events), 1)` (SERP and click) events into `r polloi::compress(nrow(searches), 1)` searches.
+```{r query_clustering, dependson = c("aggregation", "query_clustering_functions"), cache = TRUE}
 searches <- searches %>%
   group_by(`test group`, session_id, search_id) %>%
   mutate(
-    cluster_single = safe_clust(search_id, page_id, query, `result page IDs`, 0.3, "single"),
+    cluster_single = safe_clust(search_id, page_id, query, `result page IDs`, 0.301, "single"),
     cluster_average = safe_clust(search_id, page_id, query, `result page IDs`, 0.433, "average"),
-    cluster_complete = safe_clust(search_id, page_id, query, `result page IDs`, 0.377, "complete")
+    cluster_complete = safe_clust(search_id, page_id, query, `result page IDs`, 0.45, "complete")
   )
 ```
-```{r query_reformulations, dependson = "query_clustering"}
+```{r query_reformulations, dependson = "query_clustering", cache = TRUE}
 most_common <- function(x) {
   if (all(is.na(x))) {
     return(as.character(NA))
@@ -440,7 +460,7 @@ rm(query_reformulations_average, query_reformulations_complete, query_reformulat
 
 ### Query Reformulation
 
-In Figures `r figure_caps("query_reform_counts", display = "num")` and `r figure_caps("query_reform_prop", display = "num")`, we see...
+As mentioned in the Methods section, we used hierarchical clustering to group similar searches together. That is, if the edit distance between two search queries is small enough and the search result sets overlap, those searches are probably the user reformulating their query. In Figures `r figure_caps("query_reform_counts", display = "num")` and `r figure_caps("query_reform_prop", display = "num")`, we see proportions of searches that were reformulations, according to three different ways to group searches. The second group ("same query builder as control group but using BM25") had the highest proportion of searches where the user reformulated their query at least once. According to clustering via single linkage, the last group (BM25 with incoming links and tracking typos) had the lowest proportion of query reformulations.
 
 ```{r query_reformulations_counts_caption, echo = FALSE}
 query_reform_counts_cap <- format_caption(figure_caps, "query_reform_counts")
@@ -466,7 +486,7 @@ query_reformulations %>%
         panel.border = element_rect(color = "gray30", fill = NA))
 ```
 
-```{r query_reformulations_prop, dependson = "query_reformulations"}
+```{r query_reformulations_prop, dependson = "query_reformulations", cache = TRUE}
 # Calculate proportion of searches where user reformulated their query
 reformulation_counts <- query_reformulations %>%
   group_by(linkage, `test group`) %>%
@@ -493,12 +513,12 @@ reformulation_counts %>%
              data = filter(reformulation_counts, `test group` == "Control Group (tf–idf)")) +
   geom_pointrange(aes(ymin = lower, ymax = upper), position = position_dodge(width = 1)) +
   scale_y_continuous(labels = scales::percent_format(),
-                     breaks = seq(.16, .24, 0.01),
-                     minor_breaks = seq(.16, .24, 0.005),
+                     breaks = seq(.10, .24, 0.01),
+                     minor_breaks = seq(.10, .24, 0.005),
                      expand = c(0.01, 0.01)) +
   scale_color_brewer("Test Group", palette = "Set1", guide = guide_legend(ncol = 2)) +
   facet_wrap(~ linkage, ncol = 3) +
-  geom_text(aes(label = sprintf("%.1f%%", 100 * proportion), y = upper + 0.005, vjust = "bottom"),
+  geom_text(aes(label = sprintf("%.1f%%", 100 * proportion), y = upper + 0.0025, vjust = "bottom"),
             position = position_dodge(width = 1)) +
   labs(y = "% of searches with query reformulations", x = NULL,
        title = "Searches with reformulated queries by test group (and linkage)",
@@ -515,9 +535,9 @@ reformulation_counts %>%
 
 ### Zero Results Rate
 
-In `r figure_caps("zrr", display = "cite")`, we see...
+In `r figure_caps("zrr", display = "cite")`, we see that zero results rate (ZRR) was not so different between the groups. The test group where we tracked typos in first two characters had a significantly lower ZRR, but perhaps at the cost of relevance and engagement with the results (see `r figure_caps("engagement_overall", display = "cite")`).
 
-```{r zrr, dependson = "query_clustering"}
+```{r zrr, dependson = "query_clustering", cache = TRUE}
 zrr_pages <- searches %>%
   group_by(`test group`, results) %>%
   tally %>%
@@ -549,9 +569,9 @@ zrr_pages %>%
 
 ### PaulScore
 
-In `r figure_caps("paulscore", display = "cite")`, we see...
+In `r figure_caps("paulscore", display = "cite")`, we see that the test groups that used BM25 with incoming links and pageviews as query-independent factors had higher PaulScores, which indicates that the results were more relevant.
 
-```{r paulscores, dependson = "query_clustering"}
+```{r paulscores, dependson = "query_clustering", cache = TRUE}
 set.seed(0) # for reproducibility
 paulscores <- searches %>%
   ungroup %>%
@@ -592,9 +612,43 @@ paulscores %>%
 
 ### Engagement
 
-In `r figure_caps("engagement", display = "cite")`, we see...
+In Figures `r figure_caps("engagement_overall", display = "num")` and `r figure_caps("engagement", display = "num")`, we see that the test groups that used BM25 with incoming links and pageviews as query-independent factors engaged with their search results more. The group whose search configuration included pageviews had a much higher clickthrough rate than the control group when they did not reformulate their search query.
 
-```{r engagement, dependson = "query_reformulations"}
+```{r engagement_overall, dependson = "query_reformulations", cache = TRUE}
+engagement_overall <- searches %>%
+  group_by(`test group`) %>%
+  summarize(clickthroughs = sum(clickthrough > 0),
+            searches = n(), ctr = clickthroughs/searches) %>%
+  ungroup
+engagement_overall <- cbind(
+  engagement_overall,
+  as.data.frame(
+    binom:::binom.bayes(
+      engagement_overall$clickthroughs,
+      n = engagement_overall$searches)[, c("mean", "lower", "upper")]
+    )
+  )
+```
+```{r engagement_overall_caption, echo = FALSE}
+engagement_overall_cap <- format_caption(figure_caps, "engagement_overall")
+```
+```{r engagement_overall_eda, fig.cap = engagement_overall_cap, dependson = "engagement_overall"}
+engagement_overall %>%
+  ggplot(aes(x = 1, y = mean, color = `test group`)) +
+  geom_hline(aes(yintercept = mean), linetype = "dashed", color = RColorBrewer::brewer.pal(3, "Set1")[1],
+             data = filter(engagement_overall, `test group` == "Control Group (tf–idf)")) +
+  geom_pointrange(aes(ymin = lower, ymax = upper), position = position_dodge(width = 1)) +
+  scale_color_brewer("Test Group", palette = "Set1", guide = guide_legend(ncol = 2)) +
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0.01, 0.01)) +
+  labs(x = NULL, y = "Clickthrough rate",
+       title = "Engagement with search results by test group") +
+  geom_text(aes(label = sprintf("%.1f%%", 100 * ctr), y = upper + 0.0025, vjust = "bottom"),
+            position = position_dodge(width = 1)) +
+  theme_minimal(base_family = "Lato") +
+  theme(legend.position = "bottom")
+```
+
+```{r engagement, dependson = "query_reformulations", cache = TRUE}
 # Figure out engagement (clickthroughs) on a per-search ("query cluster") basis:
 per_search_engagement <- query_reformulations %>%
   filter(results == "some") %>%
@@ -647,9 +701,9 @@ engagement %>%
 
 ### First Clicked Result's Position
 
-In `r figure_caps("first_clicked", display = "cite")`, we see...
+In `r figure_caps("first_clicked", display = "cite")`, we see that users who got the "all-field" query builder with BM25 were much less likely to click on the first search result first than the other groups. Other test groups (whose search configurations used incoming links) first clicked on the first result at a much higher rate than users in the control group.
 
-```{r first_clicked_position, dependson = "query_reformulations"}
+```{r first_clicked_position, dependson = "query_reformulations", cache = TRUE}
 safe_ordinals <- function(x) {
   return(vapply(x, toOrdinal::toOrdinal, ""))
 }
@@ -695,6 +749,10 @@ first_clicked %>%
         panel.border = element_rect(color = "gray30", fill = NA))
 ```
 
+## Conclusion
+
+We recommend switching to BM25 ranking with incoming links (and possibly pageviews) as query-independent factors, as this configuration appears to give users results that are more relevant and that they engage with more (especially the first search result).
+
 ## References
 
 ### Reading
@@ -709,7 +767,7 @@ c("base", "stats", "utils", "magrittr", "ggplot2", "dplyr", "tidyr", "readr", "b
   unique %>%
   unlist %>%
   {
-    paste0("<li id=\"ref-", (1:length(.)) + 4, "\">", ., "</li>")
+    paste0("<li id=\"ref-", (1:length(.)) + 1, "\">", ., "</li>")
   } %>%
   paste(collapse = "") %>%
   gsub("<URL:", "", ., fixed = TRUE) %>%
