@@ -10,13 +10,13 @@
 
 
 <meta name="author" content="Erik Bernhardson (Engineering)" />
-<meta name="author" content="David Causse (Engineering)" />
+<meta name="author" content="David Causse (Engineering &amp; Report)" />
 <meta name="author" content="Trey Jones (Engineering &amp; Review)" />
 <meta name="author" content="Mikhail Popov (Analysis &amp; Report)" />
 <meta name="author" content="Deb Tankersley (Product Management)" />
 <meta name="author" content="Chelsy Xie (Review)" />
 
-<meta name="date" content="2016-10-05" />
+<meta name="date" content="2016-10-11" />
 
 <title>Improving search result relevancy on Wikipedia with BM25 ranking</title>
 
@@ -273,14 +273,13 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">Improving search result relevancy on Wikipedia with BM25 ranking</h1>
-<h3 class="subtitle"><em>Second Draft</em></h3>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:EBernhardson_(WMF)'>Erik Bernhardson</a> (Engineering)</em></h4>
-<h4 class="author"><em><a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering)</em></h4>
+<h4 class="author"><em><a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering &amp; Report)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:TJones_(WMF)'>Trey Jones</a> (Engineering &amp; Review)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:MPopov_(WMF)'>Mikhail Popov</a> (Analysis &amp; Report)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:DTankersley_(WMF)'>Deb Tankersley</a> (Product Management)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:CXie_(WMF)'>Chelsy Xie</a> (Review)</em></h4>
-<h4 class="date"><em>05 October 2016</em></h4>
+<h4 class="date"><em>11 October 2016</em></h4>
 
 </div>
 
@@ -302,7 +301,7 @@ $(function() {
 </p>
 <div id="executive-summary" class="section level2">
 <h2>Executive Summary</h2>
-<p>In order to improve the relevancy of search results, Discovery’s Search team has decided to test a new document ranking method called <a href="https://en.wikipedia.org/wiki/Okapi_BM25">BM25</a>, which would replace the term frequency–inverse document frequency (<a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf">tf–idf</a>) method that is currently used. We saw the following results from our analysis:</p>
+<p>In order to improve the relevancy of search results, Discovery’s Search team has decided to test a new document ranking function called <a href="https://en.wikipedia.org/wiki/Okapi_BM25">BM25</a>, which would replace the Lucene classic similarity that is currently used. We saw the following results from our analysis:</p>
 <dl>
 <dt><span class="test-group-2 no-italics">█</span> Same “all field” query builder as control group but using BM25 as similarity function</dt>
 <dd>For searches made by users in this group, we use the same query builder as we use for the control group, but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independent factor (QIF). Users in this group were less likely to click on the 1st search result and instead more likely to click on the second search result. They were also more likely to reformulate their query. With regards to zero results rate (ZRR), <a href="https://www.mediawiki.org/wiki/Wikimedia_Discovery/Search/Glossary#PaulScore">PaulScore</a>, and engagement, users in this group were very similar to users in the control group.
@@ -321,11 +320,11 @@ $(function() {
 </div>
 <div id="background" class="section level2">
 <h2>Background</h2>
-<p>The Discovery department’s mission is to help users discover and access knowledge on Wikipedia and other Wikimedia projects. One of the goals of Discovery’s Search team is to improve the relevance of results when users search Wikipedia and its sister projects. Currently, our search engine uses <a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf">term frequency–inverse document frequency (tf–idf)</a> to rank articles. To improve the search results, we decided to try a new document-ranking function: <a href="https://en.wikipedia.org/wiki/Okapi_BM25">Okapi BM25</a> (BM stands for Best Matching). To assess the efficacy of the proposed switch, we ran an A/B test for 10 days and anonymously tracked randomly sampled search sessions. Some users received search results acquired through the tf–idf method, while others received search results acquired through BM25 with various configurations. We are primarily interested in:</p>
+<p>The Discovery department’s mission is to help users discover and access knowledge on Wikipedia and other Wikimedia projects. One of the goals of Discovery’s Search team is to improve the relevance of results when users search Wikipedia and its sister projects. Currently, our search engine uses <a href="https://lucene.apache.org/core/5_5_0/core/org/apache/lucene/search/similarities/TFIDFSimilarity.html">Lucene classic similarity</a> to rank articles using <a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf">term frequency–inverse document frequency (tf–idf)</a>. To improve the search results, we decided to try a new document-ranking function: <a href="https://en.wikipedia.org/wiki/Okapi_BM25">Okapi BM25</a> (BM stands for Best Matching). To assess the efficacy of the proposed switch, we ran an A/B test for 10 days and anonymously tracked randomly sampled search sessions. Some users received search results acquired through the Lucene similarity, while others received search results acquired through BM25 with various configurations. We are primarily interested in:</p>
 <ul>
 <li><strong>Zero results rate</strong>, the proportion of searches that yielded zero results (smaller is better)</li>
 <li><strong>Users’ engagement</strong> with the search results, measured as the clickthrough rate (bigger is better)</li>
-<li><strong>PaulScore</strong>, a metric of search results’ relevancy that relies on the position of the clicked result[s] (bigger is better); see <a href="#paulscore_definition">PaulScore Definition</a> below for more details</li>
+<li><strong>PaulScore</strong>, a metric of search results’ relevancy that relies on the position of the clicked result[s] (bigger is better); see <a href="#paulscore-definition">PaulScore Definition</a> below for more details</li>
 <li><strong>Query reformulation</strong> – one way to think about the strength of our search engine is how many times the user reformulates their query; if a user in the test group has to reformulate their query many more times to get the results they are interested in, then maybe the change is for the worse</li>
 </ul>
 </div>
@@ -333,7 +332,7 @@ $(function() {
 <h2>Methods</h2>
 <div id="data" class="section level3">
 <h3>Data</h3>
-<p>Users who searched <a href="https://en.wikipedia.org/wiki/Main_Page">English Wikipedia</a> (“enwiki”) had a 1 in 66 chance of being selected for search satisfaction tracking according to our <a href="https://meta.wikimedia.org/w/index.php?title=Schema:TestSearchSatisfaction2&amp;oldid=15700292">TestSearchSatisfaction2 #15700292</a> schema. See change <a href="https://gerrit.wikimedia.org/r/#/c/307536/">307536</a> on Gerrit for more details. Those users who were on EnWiki and were randomly selected to have their sessions anonymously tracked then had a 2 in 3 chance of being selected for the BM25 test.</p>
+<p>Users who searched <a href="https://en.wikipedia.org/wiki/Main_Page">English Wikipedia</a> (“enwiki”) had a 1 in 66 chance of being selected for search satisfaction tracking according to our <a href="https://meta.wikimedia.org/w/index.php?title=Schema:TestSearchSatisfaction2&amp;oldid=15700292">TestSearchSatisfaction2 #15700292</a> schema. See change <a href="https://gerrit.wikimedia.org/r/#/c/307536/">307536</a> on Gerrit for more details. Those users who were on enwiki and were randomly selected to have their sessions anonymously tracked then had a 2 in 3 chance of being selected for the BM25 test.</p>
 <p>Users who were randomly selected for the A/B test were then randomly assigned to one of five groups. For all the groups listed below, we include the normalized <a href="https://en.wikipedia.org/wiki/Discounted_cumulative_gain">discounted cumulative gain</a> (<a href="https://en.wikipedia.org/wiki/Discounted_cumulative_gain#Normalized_DCG">nDCG</a>) score – a measure of ranking quality – computed from ranking data collected through <a href="https://www.mediawiki.org/wiki/Wikimedia_Discovery/Search/Glossary#Discernatron">Discernatron</a>, a tool that allows participants to judge the relevance of search results to help the Search team be able to test changes before making them available on-wiki.</p>
 <dl>
 <dt><span class="test-group-1">Control Group (tf–idf)</span></dt>
@@ -352,6 +351,12 @@ $(function() {
 <dd>Similar to <span class="test-group-4">the group described above</span>, but with an additional field to track typos in the first two characters. We expect a slight decrease in zero result rate and hope for an increase in clickthrough rate. This test is added to measure the benefit of such a field. The question of interest we hope to answer is: Will this increase in noise provide more annoying suggestions or will it help our users? (This feature can’t be really tested with Discernatron today.)
 </dd>
 </dl>
+<p>The “all field” field approach combines raw term frequency and field weights at index time, it creates an artificial field where the content of each field is copied <em>n</em> times:</p>
+<ul>
+<li>A word in the title is copied 20 times</li>
+<li>A word in the title is copied 15 times</li>
+</ul>
+<p>At query time, we use this single all weighted field. The per field builder approach combines scores of individual fields at query time.</p>
 <p>The full-text (as opposed to auto-complete) searching event logging data was extracted from the database using the following SQL query:</p>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span>
   <span class="kw">LEFT</span>(`timestamp`, <span class="dv">8</span>) <span class="kw">AS</span> <span class="dt">date</span>,

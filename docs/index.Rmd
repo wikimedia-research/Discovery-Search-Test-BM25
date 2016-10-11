@@ -1,9 +1,8 @@
 ---
 title: "Improving search result relevancy on Wikipedia with BM25 ranking"
-subtitle: "Second Draft"
 author:
 - <a href = 'https://meta.wikimedia.org/wiki/User:EBernhardson_(WMF)'>Erik Bernhardson</a> (Engineering)
-- <a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering)
+- <a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering & Report)
 - <a href = 'https://meta.wikimedia.org/wiki/User:TJones_(WMF)'>Trey Jones</a> (Engineering & Review)
 - <a href = 'https://meta.wikimedia.org/wiki/User:MPopov_(WMF)'>Mikhail Popov</a> (Analysis & Report)
 - <a href = 'https://meta.wikimedia.org/wiki/User:DTankersley_(WMF)'>Deb Tankersley</a> (Product Management)
@@ -87,7 +86,7 @@ figure_caps("first_clicked", "First clicked result's position by group.", displa
 
 ## Executive Summary
 
-In order to improve the relevancy of search results, Discovery's Search team has decided to test a new document ranking method called [BM25](https://en.wikipedia.org/wiki/Okapi_BM25), which would replace the term frequency–inverse document frequency ([tf–idf](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)) method that is currently used. We saw the following results from our analysis:
+In order to improve the relevancy of search results, Discovery's Search team has decided to test a new document ranking function called [BM25](https://en.wikipedia.org/wiki/Okapi_BM25), which would replace the Lucene classic similarity that is currently used. We saw the following results from our analysis:
 
 <span class = "test-group-2 no-italics">&#9608;</span> Same "all field" query builder as control group but using BM25 as similarity function
 :   For searches made by users in this group, we use the same query builder as we use for the control group, but we switched the similarity function to BM25 and employ a weighted sum for the incoming links query independent factor (QIF). Users in this group were less likely to click on the 1st search result and instead more likely to click on the second search result. They were also more likely to reformulate their query. With regards to zero results rate (ZRR), [PaulScore](https://www.mediawiki.org/wiki/Wikimedia_Discovery/Search/Glossary#PaulScore), and engagement, users in this group were very similar to users in the control group.
@@ -105,18 +104,18 @@ We recommend switching to BM25 ranking with incoming links (and possibly pagevie
 
 ## Background
 
-The Discovery department's mission is to help users discover and access knowledge on Wikipedia and other Wikimedia projects. One of the goals of Discovery's Search team is to improve the relevance of results when users search Wikipedia and its sister projects. Currently, our search engine uses [term frequency–inverse document frequency (tf–idf)](https://en.wikipedia.org/wiki/Tf%E2%80%93idf) to rank articles. To improve the search results, we decided to try a new document-ranking function: [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25) (BM stands for Best Matching). To assess the efficacy of the proposed switch, we ran an A/B test for 10 days and anonymously tracked randomly sampled search sessions. Some users received search results acquired through the tf–idf method, while others received search results acquired through BM25 with various configurations. We are primarily interested in:
+The Discovery department's mission is to help users discover and access knowledge on Wikipedia and other Wikimedia projects. One of the goals of Discovery's Search team is to improve the relevance of results when users search Wikipedia and its sister projects. Currently, our search engine uses [Lucene classic similarity](https://lucene.apache.org/core/5_5_0/core/org/apache/lucene/search/similarities/TFIDFSimilarity.html) to rank articles using [term frequency–inverse document frequency (tf–idf)](https://en.wikipedia.org/wiki/Tf%E2%80%93idf). To improve the search results, we decided to try a new document-ranking function: [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25) (BM stands for Best Matching). To assess the efficacy of the proposed switch, we ran an A/B test for 10 days and anonymously tracked randomly sampled search sessions. Some users received search results acquired through the Lucene similarity, while others received search results acquired through BM25 with various configurations. We are primarily interested in:
 
 * __Zero results rate__, the proportion of searches that yielded zero results (smaller is better)
 * __Users' engagement__ with the search results, measured as the clickthrough rate (bigger is better)
-* __PaulScore__, a metric of search results' relevancy that relies on the position of the clicked result[s] (bigger is better); see [PaulScore Definition](#paulscore_definition) below for more details
+* __PaulScore__, a metric of search results' relevancy that relies on the position of the clicked result[s] (bigger is better); see [PaulScore Definition](#paulscore-definition) below for more details
 * __Query reformulation__ -- one way to think about the strength of our search engine is how many times the user reformulates their query; if a user in the test group has to reformulate their query many more times to get the results they are interested in, then maybe the change is for the worse
 
 ## Methods
 
 ### Data
 
-Users who searched [English Wikipedia](https://en.wikipedia.org/wiki/Main_Page) ("enwiki") had a 1 in 66 chance of being selected for search satisfaction tracking according to our [TestSearchSatisfaction2 #15700292](https://meta.wikimedia.org/w/index.php?title=Schema:TestSearchSatisfaction2&oldid=15700292) schema. See change [307536](https://gerrit.wikimedia.org/r/#/c/307536/) on Gerrit for more details. Those users who were on EnWiki and were randomly selected to have their sessions anonymously tracked then had a 2 in 3 chance of being selected for the BM25 test.
+Users who searched [English Wikipedia](https://en.wikipedia.org/wiki/Main_Page) ("enwiki") had a 1 in 66 chance of being selected for search satisfaction tracking according to our [TestSearchSatisfaction2 #15700292](https://meta.wikimedia.org/w/index.php?title=Schema:TestSearchSatisfaction2&oldid=15700292) schema. See change [307536](https://gerrit.wikimedia.org/r/#/c/307536/) on Gerrit for more details. Those users who were on enwiki and were randomly selected to have their sessions anonymously tracked then had a 2 in 3 chance of being selected for the BM25 test.
 
 Users who were randomly selected for the A/B test were then randomly assigned to one of five groups. For all the groups listed below, we include the normalized [discounted cumulative gain](https://en.wikipedia.org/wiki/Discounted_cumulative_gain) ([nDCG](https://en.wikipedia.org/wiki/Discounted_cumulative_gain#Normalized_DCG)) score -- a measure of ranking quality -- computed from ranking data collected through [Discernatron](https://www.mediawiki.org/wiki/Wikimedia_Discovery/Search/Glossary#Discernatron), a tool that allows participants to judge the relevance of search results to help the Search team be able to test changes before making them available on-wiki.
 
@@ -134,6 +133,13 @@ Users who were randomly selected for the A/B test were then randomly assigned to
 
 <span class = "test-group-5">Track typos in first 2 characters</span>
 :   Similar to <span class = "test-group-4">the group described above</span>, but with an additional field to track typos in the first two characters. We expect a slight decrease in zero result rate and hope for an increase in clickthrough rate. This test is added to measure the benefit of such a field. The question of interest we hope to answer is: Will this increase in noise provide more annoying suggestions or will it help our users? (This feature can't be really tested with Discernatron today.)
+
+The "all field" field approach combines raw term frequency and field weights at index time, it creates an artificial field where the content of each field is copied _n_ times:
+
+* A word in the title is copied 20 times
+* A word in the title is copied 15 times
+
+At query time, we use this single all weighted field. The per field builder approach combines scores of individual fields at query time.
 
 The full-text (as opposed to auto-complete) searching event logging data was extracted from the database using the following SQL query:
 
