@@ -1,8 +1,8 @@
 # BM25 Report Drafts
 
-## To-do:
+## 2016-10-11 (Third, Final Draft)
 
-- [ ] Is there a place to add in a quick reminder on the difference between using the query builder vs the per-field query builder (also in the exec summary)?
+- [x] Is there a place to add in a quick reminder on the difference between using the query builder vs the per-field query builder (also in the exec summary)?
 
 ## 2016-10-05 (Second Draft)
 
