@@ -16,19 +16,18 @@
 <meta name="author" content="Deb Tankersley (Product Management)" />
 <meta name="author" content="Chelsy Xie (Review)" />
 
-<meta name="date" content="2016-10-11" />
 
 <title>Improving search result relevancy on Wikipedia with BM25 ranking</title>
 
 <script src="index_files/jquery-1.11.3/jquery.min.js"></script>
-<script src="index_files/jqueryui-1.11.4/jquery-ui.min.js"></script>
-<link href="index_files/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
-<script src="index_files/tocify-1.9.1/jquery.tocify.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="index_files/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="index_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
 <script src="index_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
 <script src="index_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="index_files/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="index_files/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="index_files/tocify-1.9.1/jquery.tocify.js"></script>
 
 
 <style type="text/css">code{white-space: pre;}</style>
@@ -136,6 +135,7 @@ button.code-folding-btn:focus {
 </style>
 
 
+
 <div class="container-fluid main-container">
 
 <!-- tabsets -->
@@ -147,6 +147,10 @@ $(document).ready(function () {
 </script>
 
 <!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: -22px; }
+.code-folding-btn.collapsed { margin-bottom: 4px; }
+</style>
 <script src="index_files/navigation-1.1/codefolding.js"></script>
 <script>
 $(document).ready(function () {
@@ -273,18 +277,19 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">Improving search result relevancy on Wikipedia with BM25 ranking</h1>
+<h3 class="subtitle"><em>Revised on 17 November 2016</em></h3>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:EBernhardson_(WMF)'>Erik Bernhardson</a> (Engineering)</em></h4>
 <h4 class="author"><em><a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering &amp; Report)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:TJones_(WMF)'>Trey Jones</a> (Engineering &amp; Review)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:MPopov_(WMF)'>Mikhail Popov</a> (Analysis &amp; Report)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:DTankersley_(WMF)'>Deb Tankersley</a> (Product Management)</em></h4>
 <h4 class="author"><em><a href = 'https://meta.wikimedia.org/wiki/User:CXie_(WMF)'>Chelsy Xie</a> (Review)</em></h4>
-<h4 class="date"><em>11 October 2016</em></h4>
+<h4 class="date"><em>Originally published on 11 October 2016</em></h4>
 
 </div>
 
 
-<script language="JavaScript">
+<script type="text/javascript">
 $(function() {
   /* Lets the user click on the images to view them in full resolution. */
   $("div.figure img").wrap(function() {
@@ -299,6 +304,7 @@ $(function() {
 <p>
 { <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25/blob/master/docs/index.Rmd">RMarkdown Source</a> | <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25">Analysis Codebase</a> }
 </p>
+<p><em><strong>Revision Notes</strong>: In the original version of this report, some of the engagement and PaulScore calculations did not filter out searches with zero results. In this revised version, we added a filter that only keeps searches with some results (since that means users actually have something to click on). The clickthrough rates and PaulScores are slightly higher all around, so the overall conclusions are the same, but we still wanted this report to be as accurate as it can be.</em></p>
 <div id="executive-summary" class="section level2">
 <h2>Executive Summary</h2>
 <p>In order to improve the relevancy of search results, Discovery’s Search team has decided to test a new document ranking function called <a href="https://en.wikipedia.org/wiki/Okapi_BM25">BM25</a>, which would replace the Lucene classic similarity that is currently used. We saw the following results from our analysis:</p>
@@ -828,6 +834,7 @@ zrr_pages &lt;-<span class="st"> </span><span class="kw">cbind</span>(zrr_pages,
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">0</span>) <span class="co"># for reproducibility</span>
 paulscores &lt;-<span class="st"> </span>searches %&gt;%
 <span class="st">  </span>ungroup %&gt;%
+<span class="st">  </span><span class="kw">filter</span>(results ==<span class="st"> &quot;some&quot;</span>) %&gt;%
 <span class="st">  </span><span class="kw">select</span>(<span class="kw">c</span>(<span class="st">`</span><span class="dt">test group</span><span class="st">`</span>, <span class="st">`</span><span class="dt">Query score (F=0.1)</span><span class="st">`</span>, <span class="st">`</span><span class="dt">Query score (F=0.5)</span><span class="st">`</span>, <span class="st">`</span><span class="dt">Query score (F=0.9)</span><span class="st">`</span>)) %&gt;%
 <span class="st">  </span><span class="kw">gather</span>(<span class="st">`</span><span class="dt">F value</span><span class="st">`</span>, <span class="st">`</span><span class="dt">Query score</span><span class="st">`</span>, -<span class="st">`</span><span class="dt">test group</span><span class="st">`</span>) %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(<span class="st">`</span><span class="dt">F value</span><span class="st">`</span> =<span class="st"> </span><span class="kw">sub</span>(<span class="st">&quot;^Query score </span><span class="ch">\\</span><span class="st">(F=(0</span><span class="ch">\\</span><span class="st">.[159])</span><span class="ch">\\</span><span class="st">)$&quot;</span>, <span class="st">&quot;F = </span><span class="ch">\\</span><span class="st">1&quot;</span>, <span class="st">`</span><span class="dt">F value</span><span class="st">`</span>)) %&gt;%
@@ -841,7 +848,6 @@ paulscores &lt;-<span class="st"> </span>searches %&gt;%
 <span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> <span class="st">`</span><span class="dt">F value</span><span class="st">`</span>, <span class="dt">y =</span> PaulScore, <span class="dt">color =</span> <span class="st">`</span><span class="dt">test group</span><span class="st">`</span>)) +
 <span class="st">  </span><span class="kw">geom_pointrange</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> Lower, <span class="dt">ymax =</span> Upper), <span class="dt">position =</span> <span class="kw">position_dodge</span>(<span class="dt">width =</span> <span class="fl">0.7</span>)) +
 <span class="st">  </span><span class="kw">scale_color_brewer</span>(<span class="st">&quot;Test Group&quot;</span>, <span class="dt">palette =</span> <span class="st">&quot;Set1&quot;</span>, <span class="dt">guide =</span> <span class="kw">guide_legend</span>(<span class="dt">ncol =</span> <span class="dv">2</span>)) +
-<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">limits =</span> <span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.35</span>)) +
 <span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="ot">NULL</span>, <span class="dt">y =</span> <span class="st">&quot;PaulScore(F)&quot;</span>,
        <span class="dt">title =</span> <span class="st">&quot;PaulScore(F) by test group and value of F&quot;</span>,
        <span class="dt">subtitle =</span> <span class="st">&quot;With bootstrapped 95% confidence intervals. Dashed line indicates baseline (control group) for comparing test groups.&quot;</span>) +
@@ -864,6 +870,7 @@ paulscores &lt;-<span class="st"> </span>searches %&gt;%
 <h3>Engagement</h3>
 <p>In Figures 5 and 6, we see that the <span class="test-group-3">test groups that used BM25 with incoming links</span> and <span class="test-group-4">pageviews as query-independent factors</span> engaged with their search results more. The <span class="test-group-4">group whose search configuration included pageviews</span> had a much higher clickthrough rate than the control group when they did not reformulate their search query.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">engagement_overall &lt;-<span class="st"> </span>searches %&gt;%
+<span class="st">  </span><span class="kw">filter</span>(results ==<span class="st"> &quot;some&quot;</span>) %&gt;%
 <span class="st">  </span><span class="kw">group_by</span>(<span class="st">`</span><span class="dt">test group</span><span class="st">`</span>) %&gt;%
 <span class="st">  </span><span class="kw">summarize</span>(<span class="dt">clickthroughs =</span> <span class="kw">sum</span>(clickthrough &gt;<span class="st"> </span><span class="dv">0</span>),
             <span class="dt">searches =</span> <span class="kw">n</span>(), <span class="dt">ctr =</span> clickthroughs/searches) %&gt;%
@@ -1027,7 +1034,7 @@ Wickham H, Hester J and Francois R (2016). <em>readr: Read TabularData</em>. R p
 Dorai-Raj S (2014). <em>binom: Binomial Confidence Intervals ForSeveral Parameterizations</em>. R package version 1.1-1, <a href="https://CRAN.R-project.org/package=binom" class="uri">https://CRAN.R-project.org/package=binom</a>
 </li>
 <li id="ref-9">
-Allaire J, Cheng J, Xie Y, McPherson J, Chang W, Allen J, WickhamH, Atkins A and Hyndman R (2016). <em>rmarkdown: Dynamic Documentsfor R</em>. R package version 1.0, <a href="https://CRAN.R-project.org/package=rmarkdown" class="uri">https://CRAN.R-project.org/package=rmarkdown</a>
+Allaire J, Cheng J, Xie Y, McPherson J, Chang W, Allen J, WickhamH, Atkins A and Hyndman R (2016). <em>rmarkdown: Dynamic Documentsfor R</em>. R package version 1.1, <a href="https://CRAN.R-project.org/package=rmarkdown" class="uri">https://CRAN.R-project.org/package=rmarkdown</a>
 </li>
 <li id="ref-10">
 Xie Y (2016). <em>knitr: A General-Purpose Package for Dynamic ReportGeneration in R</em>. R package version 1.14, <a href="http://yihui.name/knitr/" class="uri">http://yihui.name/knitr/</a>
@@ -1055,6 +1062,7 @@ Xie Y (2014). “knitr: A Comprehensive Tool for ReproducibleResearch in R.” I
 $(document).ready(function () {
   $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
 });
+
 
 </script>
 

@@ -1,5 +1,6 @@
 ---
 title: "Improving search result relevancy on Wikipedia with BM25 ranking"
+subtitle: "Revised on `r as.character(Sys.Date(), '%d %B %Y')`"
 author:
 - <a href = 'https://meta.wikimedia.org/wiki/User:EBernhardson_(WMF)'>Erik Bernhardson</a> (Engineering)
 - <a href = 'https://www.mediawiki.org/wiki/User:DCausse_(WMF)'>David Causse</a> (Engineering & Report)
@@ -7,7 +8,7 @@ author:
 - <a href = 'https://meta.wikimedia.org/wiki/User:MPopov_(WMF)'>Mikhail Popov</a> (Analysis & Report)
 - <a href = 'https://meta.wikimedia.org/wiki/User:DTankersley_(WMF)'>Deb Tankersley</a> (Product Management)
 - <a href = 'https://meta.wikimedia.org/wiki/User:CXie_(WMF)'>Chelsy Xie</a> (Review)
-date: "`r as.character(as.Date('2016-10-11'), '%d %B %Y')`"
+date: "Originally published on `r as.character(as.Date('2016-10-11'), '%d %B %Y')`"
 output:
   html_document:
     code_folding: hide
@@ -26,7 +27,7 @@ output:
     toc_float:
       collapsed: no
 ---
-<script language="JavaScript">
+```{js, echo = FALSE}
 $(function() {
   /* Lets the user click on the images to view them in full resolution. */
   $("div.figure img").wrap(function() {
@@ -37,7 +38,7 @@ $(function() {
     return link;
   });
 });
-</script>
+```
 <p>{ <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25/blob/master/docs/index.Rmd">RMarkdown Source</a> | <a href="https://github.com/wikimedia-research/Discovery-Search-Test-BM25">Analysis Codebase</a> }</p>
 ```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
 options(digits = 3, scipen = 500)
@@ -83,6 +84,8 @@ figure_caps("engagement_overall", "Clickthrough rates of test groups.", display 
 figure_caps("engagement", "Clickthrough rates of test groups after splitting searches into those having query reformulations and those without query reformulations.", display = FALSE)
 figure_caps("first_clicked", "First clicked result's position by group.", display = FALSE)
 ```
+
+_**Revision Notes**: In the original version of this report, some of the engagement and PaulScore calculations did not filter out searches with zero results. In this revised version, we added a filter that only keeps searches with some results (since that means users actually have something to click on). The clickthrough rates and PaulScores are slightly higher all around, so the overall conclusions are the same, but we still wanted this report to be as accurate as it can be._
 
 ## Executive Summary
 
@@ -583,6 +586,7 @@ In `r figure_caps("paulscore", display = "cite")`, we see that the <span class =
 set.seed(0) # for reproducibility
 paulscores <- searches %>%
   ungroup %>%
+  filter(results == "some") %>%
   select(c(`test group`, `Query score (F=0.1)`, `Query score (F=0.5)`, `Query score (F=0.9)`)) %>%
   gather(`F value`, `Query score`, -`test group`) %>%
   mutate(`F value` = sub("^Query score \\(F=(0\\.[159])\\)$", "F = \\1", `F value`)) %>%
@@ -602,7 +606,6 @@ paulscores %>%
   ggplot(aes(x = `F value`, y = PaulScore, color = `test group`)) +
   geom_pointrange(aes(ymin = Lower, ymax = Upper), position = position_dodge(width = 0.7)) +
   scale_color_brewer("Test Group", palette = "Set1", guide = guide_legend(ncol = 2)) +
-  scale_y_continuous(limits = c(0.2, 0.35)) +
   labs(x = NULL, y = "PaulScore(F)",
        title = "PaulScore(F) by test group and value of F",
        subtitle = "With bootstrapped 95% confidence intervals. Dashed line indicates baseline (control group) for comparing test groups.") +
@@ -624,6 +627,7 @@ In Figures `r figure_caps("engagement_overall", display = "num")` and `r figure_
 
 ```{r engagement_overall, dependson = "query_reformulations", cache = TRUE}
 engagement_overall <- searches %>%
+  filter(results == "some") %>%
   group_by(`test group`) %>%
   summarize(clickthroughs = sum(clickthrough > 0),
             searches = n(), ctr = clickthroughs/searches) %>%
